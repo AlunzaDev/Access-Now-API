@@ -1,12 +1,18 @@
 import type { Request, Response } from "express";
 import { ErrorService } from "../../../api/middlewares/errors/error-handler";
 import type { DeviceService } from "../../../application/services/device/device.service";
+import type { GatewayService } from "../../../application/services/device/gateway.service";
+import { requestGateway } from "../../../api/middlewares/gateway/gateway-auth.middleware";
+import { HeartbeatDto } from "../../../domain/dtos/device/heartbeat.dto";
 import { CreateDeviceDto, parsePagination, parseSearch, UpdateDeviceDto } from "../../../domain/dtos";
 import { DEVICE_TYPES, type DeviceType } from "../../../domain/entities/device/device.entity";
 import { bodyOf, queryOf, routeParam } from "../shared/route-params";
 
 export class DeviceController {
-  constructor(private readonly service: DeviceService) {}
+  constructor(
+    private readonly service: DeviceService,
+    private readonly gateways: GatewayService,
+  ) {}
 
   list = async (request: Request, response: Response) => {
     try {
@@ -106,6 +112,39 @@ export class DeviceController {
         return ErrorService.send(response, 400, "token, device_fingerprint y device_name son requeridos");
       }
       return response.json(await this.service.enroll(token, fingerprint, deviceName));
+    } catch (error) {
+      return ErrorService.handleApiError(error, response);
+    }
+  };
+
+  status = async (request: Request, response: Response) => {
+    try {
+      return response.json(await this.service.status(routeParam(request, "proyectoId"), routeParam(request, "id")));
+    } catch (error) {
+      return ErrorService.handleApiError(error, response);
+    }
+  };
+
+  history = async (request: Request, response: Response) => {
+    try {
+      const page = parsePagination(queryOf(request), 20);
+      return response.json(
+        await this.service.history(routeParam(request, "proyectoId"), routeParam(request, "id"), page),
+      );
+    } catch (error) {
+      return ErrorService.handleApiError(error, response);
+    }
+  };
+
+  /** GET /api/v1/me (gateway token): SCAT checks that its enrollment is still valid. */
+  me = (request: Request, response: Response) => response.json(this.gateways.me(requestGateway(request)));
+
+  /** POST /api/v1/device/heartbeat (gateway token). */
+  heartbeat = async (request: Request, response: Response) => {
+    try {
+      const [error, dto] = HeartbeatDto.create(bodyOf(request));
+      if (error) return ErrorService.send(response, 400, error);
+      return response.json(await this.gateways.heartbeat(requestGateway(request), dto!));
     } catch (error) {
       return ErrorService.handleApiError(error, response);
     }

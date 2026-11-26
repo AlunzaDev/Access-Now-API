@@ -3,6 +3,7 @@ export * from "./auth/forgot-password.dto";
 export * from "./auth/reset-password.dto";
 export * from "./device/create-device.dto";
 export * from "./device/update-device.dto";
+export * from "./device/heartbeat.dto";
 export * from "./user/create-user.dto";
 export * from "./user/update-user.dto";
 export * from "./permission-profile/create-permission-profile.dto";

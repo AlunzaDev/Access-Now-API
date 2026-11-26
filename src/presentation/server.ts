@@ -5,6 +5,7 @@ import { ErrorService } from "../api/middlewares/errors/error-handler";
 import { logger } from "../config/logger";
 import { envs } from "../config/plugins/envs.plugin";
 import { PostgresDatabase } from "../infrastructure/prisma/postgres.database";
+import { buildDevicePresenceMonitor } from "./dependencies";
 
 interface ServerOptions {
   host?: string;
@@ -34,6 +35,7 @@ export class Server {
   private readonly routes: Router;
   private httpServer?: HttpServer;
   private shuttingDown = false;
+  private readonly presenceMonitor = buildDevicePresenceMonitor();
 
   constructor({ host = "0.0.0.0", port, publicPath = "public", routes }: ServerOptions) {
     this.host = host;
@@ -66,6 +68,8 @@ export class Server {
 
     this.app.use(ErrorService.middleware);
 
+    this.presenceMonitor.start();
+
     this.httpServer = this.app.listen(this.port, this.host, () => {
       logger.info(`Access Now API en ${this.host}:${this.port}`);
     });
@@ -92,6 +96,7 @@ export class Server {
         this.httpServer.close(() => resolve());
         this.httpServer.closeIdleConnections();
       });
+      await this.presenceMonitor.stop();
       await PostgresDatabase.disconnect();
       process.exit(0);
     } catch (error) {

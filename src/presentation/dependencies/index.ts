@@ -7,6 +7,9 @@ import { ProjectService } from "../../application/services/project/project.servi
 import { PermissionProfileService } from "../../application/services/permission-profile/permission-profile.service";
 import { UserService } from "../../application/services/user/user.service";
 import { DeviceService } from "../../application/services/device/device.service";
+import { DevicePresenceMonitor } from "../../application/services/device/device-presence.monitor";
+import { GatewayService } from "../../application/services/device/gateway.service";
+import { createGatewayAuthMiddleware } from "../../api/middlewares/gateway/gateway-auth.middleware";
 import { envs } from "../../config";
 import { NodemailerEmailSender } from "../../infrastructure/email/nodemailer-email.sender";
 import { LocalFileStorage, SpacesFileStorage } from "../../infrastructure/storage";
@@ -69,4 +72,16 @@ export const buildProjectController = () =>
 
 export const buildHealthController = () => new HealthController();
 
-export const buildDeviceController = () => new DeviceController(new DeviceService(buildDeviceRepository()));
+export const buildGatewayService = () => new GatewayService(buildDeviceRepository(), envs.DEVICE_OFFLINE_AFTER_MS);
+
+export const buildGatewayAuthMiddleware = () => createGatewayAuthMiddleware(buildGatewayService());
+
+export const buildDeviceController = () =>
+  new DeviceController(
+    new DeviceService(buildDeviceRepository(), envs.DEVICE_OFFLINE_AFTER_MS),
+    buildGatewayService(),
+  );
+
+/** Marks offline the gateways that stop sending heartbeats (started by the server). */
+export const buildDevicePresenceMonitor = () =>
+  new DevicePresenceMonitor(buildGatewayService(), envs.DEVICE_PRESENCE_CHECK_MS);

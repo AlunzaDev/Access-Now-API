@@ -19,4 +19,12 @@ export class DeviceRepositoryImpl implements DeviceRepository {
   completeEnrollment: DeviceRepository["completeEnrollment"] = (...args) =>
     this.datasource.completeEnrollment(...args);
   delete: DeviceRepository["delete"] = (...args) => this.datasource.delete(...args);
+  findByDeviceTokenHash: DeviceRepository["findByDeviceTokenHash"] = (...args) =>
+    this.datasource.findByDeviceTokenHash(...args);
+  findEnrollmentDates: DeviceRepository["findEnrollmentDates"] = (...args) =>
+    this.datasource.findEnrollmentDates(...args);
+  recordHeartbeat: DeviceRepository["recordHeartbeat"] = (...args) => this.datasource.recordHeartbeat(...args);
+  markOfflineBefore: DeviceRepository["markOfflineBefore"] = (...args) => this.datasource.markOfflineBefore(...args);
+  addEvent: DeviceRepository["addEvent"] = (...args) => this.datasource.addEvent(...args);
+  listEvents: DeviceRepository["listEvents"] = (...args) => this.datasource.listEvents(...args);
 }

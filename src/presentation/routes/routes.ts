@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { runWithAuditContext } from "../../config/audit-context";
 import { ErrorService } from "../../api/middlewares/errors/error-handler";
-import { buildAuthMiddleware } from "../dependencies";
+import { buildAuthMiddleware, buildGatewayAuthMiddleware } from "../dependencies";
 import { AuthRoutes } from "./auth/auth.routes";
 import { HealthRoutes } from "./health/health.routes";
 import { ProjectRoutes } from "./project/project.routes";
@@ -22,7 +22,7 @@ export class AppRoutes {
     });
     router.use("/api/health", HealthRoutes.routes());
     router.use("/api/auth", AuthRoutes.routes(auth));
-    router.use("/api/v1", DeviceRoutes.enrollment());
+    router.use("/api/v1", DeviceRoutes.enrollment(buildGatewayAuthMiddleware()));
     router.use("/api/usuarios", UserRoutes.routes(auth));
     router.use("/api/perfiles-permisos", PermissionProfileRoutes.routes(auth));
     router.use("/api/proyectos/:proyectoId/dispositivos", DeviceRoutes.routes(auth));

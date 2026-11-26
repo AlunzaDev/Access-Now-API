@@ -104,7 +104,9 @@ Los nombres de archivos y carpetas siguen [convencion-nombres.md](convencion-nom
 - `SUPER_ROLE` abre todos los módulos y no lleva perfil. `ADMIN_ROLE` abre solo los módulos de su perfil (`requireModules`). El perfil es global (los mismos módulos en todos sus proyectos).
 - **Proyectos:** cada usuario pertenece a uno o varios proyectos (`SUPER_ROLE` los ve todos). La sesión trae `proyectos`, y todo lo de un proyecto cuelga de `/api/proyectos/:proyectoId/...` con `requireProjectAccess()`. Los servicios reciben un `Actor` (`sessionActor(req)`) con su `projectAccess` y aplican `domain/policies/project/project-access-policy.ts`: un admin solo ve y administra usuarios de sus proyectos. Lo que no puede ver responde 404, como si no existiera.
 - Solo un super administrador puede crear, cambiar o eliminar a otro super administrador, y nadie puede desactivarse, cambiarse el rol o eliminarse a sí mismo (`domain/policies/user/user-management-policy.ts`).
-- Los scanners (SCAT) tendrán su propia autenticación por dispositivo (#7); no usan usuarios del dashboard.
+- Los gateways (SCAT) no usan usuarios del dashboard: se enrolan con un token de un solo uso y luego operan con un **token operativo** (`Authorization: Bearer`, solo se guarda su SHA-256), que valida `api/middlewares/gateway/gateway-auth.middleware.ts`.
+- **Presencia real:** el gateway siempre inicia la conexión (heartbeat, sin puertos abiertos). `GatewayService` guarda cada heartbeat y `DevicePresenceMonitor` (iniciado y detenido con el servidor) marca fuera de línea a quien supere `DEVICE_OFFLINE_AFTER_MS`. Nunca se muestra "En línea" sin heartbeat (`domain/policies/device/device-presence-policy.ts`).
+- **Historial:** `dispositivo_eventos` es de solo inserción (token generado, enrolado, re-enrolado, conectado, desconectado…), con el actor de la auditoría.
 
 Excepciones conocidas: `server.ts` conecta la base al arrancar y `routes/health` consulta el estado de la conexión; ambos usan `PostgresDatabase` directamente porque ese es su propósito.
 

@@ -115,6 +115,10 @@ El frontend valida lo mismo antes de enviar; el backend es la fuente de verdad.
 | `POST /proyectos/:proyectoId/dispositivos` | Módulo `scanners` y acceso al proyecto | Dispositivo creado (`201`) |
 | `GET/PATCH/DELETE /proyectos/:proyectoId/dispositivos/:id` | Módulo `scanners` y acceso al proyecto | Dispositivo; otro proyecto responde `404` |
 | `POST /proyectos/:proyectoId/dispositivos/:id/token-enrolamiento` | Módulo `scanners` y acceso al proyecto | Solo gateway; recibe vigencia de 1/24/168 horas y enrolamiento de 30/90 días o sin vencimiento; token visible una vez |
+| `GET /proyectos/:proyectoId/dispositivos/:id/estado` | Módulo `scanners` y acceso al proyecto | `{ tipo, enLinea, ultimaConexion, umbralFueraDeLineaMs, enrolamiento, configEstado, configError, gateway }`. En línea solo con un heartbeat dentro del umbral (`DEVICE_OFFLINE_AFTER_MS`, 90 s por defecto); una terminal muestra la presencia de su gateway |
+| `GET /proyectos/:proyectoId/dispositivos/:id/historial` | Módulo `scanners` y acceso al proyecto | `{ items, total }` (`desde`, `limite`), más reciente primero. Eventos inmutables: `TOKEN_GENERADO`, `ENROLADO`, `REENROLADO`, `CONECTADO`, `DESCONECTADO`, `ENROLAMIENTO_VENCIDO`, `ERROR`, con `detalle`, `creadoEn` y `actor` |
+| `GET /v1/me` | Gateway (`Authorization: Bearer <token operativo>`) | `{ device: { id, name, fingerprint }, service: { type, expires_at, settings } }`; `401 Invalid token` o `401 Enrollment expired` |
+| `POST /v1/device/heartbeat` | Gateway (token operativo) | Cuerpo `{ version?, ip?, terminales? }`; guarda la conexión y responde `{ ok: true, serverTime, comandos: [] }`. Los comandos llegan en una fase posterior |
 | `POST /v1/device/enroll` | Público con token de enrolamiento | Contrato SCAT: recibe `{ token, device_fingerprint, device_name }`; consume el token y responde `{ token_type, token, service }` |
 
 Cada endpoint nuevo o modificado se agrega a esta tabla en el mismo commit.

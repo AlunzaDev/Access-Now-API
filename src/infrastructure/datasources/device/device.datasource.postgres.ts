@@ -1,11 +1,14 @@
 import type {
   DeviceDatasource,
   DeviceListFilters,
+  GatewayCredentials,
+  HeartbeatData,
   NewDevice,
 } from "../../../domain/datasources/device/device.datasource";
 import type { DeviceValues } from "../../../domain/dtos/device/device-fields";
 import { toPage, type Page, type PageRequest } from "../../../domain/dtos/shared/pagination";
 import { DeviceEntity } from "../../../domain/entities/device/device.entity";
+import type { DeviceEvent, DeviceEventType } from "../../../domain/entities/device/device-event.entity";
 import type { Device, Prisma } from "../../../generated/prisma/client";
 import { PostgresDatabase } from "../../prisma/postgres.database";
 import { currentAuditWrite } from "../../../config/audit-context";
@@ -29,6 +32,8 @@ const toEntity = (row: Device): DeviceEntity =>
     urlRemota: row.urlRemota,
     version: row.version,
     ultimaConexion: row.ultimaConexion,
+    enLinea: row.enLinea,
+    enrolledAt: row.enrolledAt,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
     creadoPorId: row.creadoPorId,
@@ -118,11 +123,12 @@ export class DevicePostgresDatasource implements DeviceDatasource {
   async findEnrollmentData(id: string) {
     const row = await this.devices.findUnique({
       where: { id },
-      select: { enrollmentTokenExpiresAt: true, enrollmentDurationDays: true },
+      select: { enrollmentTokenExpiresAt: true, enrollmentDurationDays: true, enrolledAt: true },
     });
     return row ? {
       tokenExpiresAt: row.enrollmentTokenExpiresAt,
       durationDays: row.enrollmentDurationDays,
+      enrolledAt: row.enrolledAt,
     } : null;
   }
 
@@ -187,6 +193,7 @@ export class DevicePostgresDatasource implements DeviceDatasource {
         enrollmentTokenHash: null,
         enrollmentTokenExpiresAt: null,
         ultimaConexion: enrolledAt,
+        enLinea: true,
       },
     });
     return toEntity(row);
@@ -197,5 +204,79 @@ export class DevicePostgresDatasource implements DeviceDatasource {
     if (!existing) return null;
     await withPrismaErrors(() => this.devices.delete({ where: { id } }));
     return existing;
+  }
+
+  async findByDeviceTokenHash(tokenHash: string): Promise<GatewayCredentials | null> {
+    const row = await this.devices.findFirst({ where: { deviceTokenHash: tokenHash, tipo: "GATEWAY" } });
+    if (!row) return null;
+    return {
+      device: toEntity(row),
+      fingerprint: row.deviceFingerprint,
+      enrolledAt: row.enrolledAt,
+      expiresAt: row.enrollmentExpiresAt,
+    };
+  }
+
+  async findEnrollmentDates(id: string) {
+    if (!isUuid(id)) return null;
+    const row = await this.devices.findUnique({
+      where: { id },
+      select: { enrolledAt: true, enrollmentExpiresAt: true },
+    });
+    return row ? { enrolledAt: row.enrolledAt, expiresAt: row.enrollmentExpiresAt } : null;
+  }
+
+  async recordHeartbeat(id: string, { at, version, ip }: HeartbeatData): Promise<{ wasOnline: boolean }> {
+    return PostgresDatabase.client.$transaction(async (tx) => {
+      const current = await tx.device.findUniqueOrThrow({ where: { id }, select: { enLinea: true } });
+      await tx.device.update({
+        where: { id },
+        data: { ultimaConexion: at, enLinea: true, ...(version ? { version } : {}), ...(ip ? { ip } : {}) },
+      });
+      return { wasOnline: current.enLinea };
+    });
+  }
+
+  async markOfflineBefore(before: Date): Promise<string[]> {
+    const stale = await this.devices.findMany({
+      where: { tipo: "GATEWAY", enLinea: true, ultimaConexion: { lt: before } },
+      select: { id: true },
+    });
+    const ids = stale.map((row) => row.id);
+    if (ids.length === 0) return [];
+    await this.devices.updateMany({ where: { id: { in: ids }, enLinea: true }, data: { enLinea: false } });
+    return ids;
+  }
+
+  async addEvent(deviceId: string, tipo: DeviceEventType, detalle: Record<string, unknown> = {}): Promise<void> {
+    const actor = currentAuditWrite();
+    await PostgresDatabase.client.deviceEvent.create({
+      data: {
+        deviceId,
+        tipo,
+        detalle: detalle as Prisma.InputJsonObject,
+        actorId: actor.actorId,
+        actorNombre: actor.actorNombre,
+      },
+    });
+  }
+
+  async listEvents(deviceId: string, { desde, limite }: PageRequest): Promise<Page<DeviceEvent>> {
+    const events = PostgresDatabase.client.deviceEvent;
+    const where = { deviceId };
+    const [rows, total] = await Promise.all([
+      events.findMany({ where, orderBy: [{ createdAt: "desc" }, { id: "desc" }], skip: desde, take: limite }),
+      events.count({ where }),
+    ]);
+    return toPage(
+      rows.map((row) => ({
+        id: row.id,
+        tipo: row.tipo,
+        detalle: (row.detalle ?? {}) as Record<string, unknown>,
+        creadoEn: row.createdAt.getTime(),
+        actor: { id: row.actorId, nombre: row.actorNombre },
+      })),
+      total,
+    );
   }
 }

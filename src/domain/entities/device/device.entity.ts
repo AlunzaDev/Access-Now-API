@@ -26,6 +26,10 @@ export type DeviceEntityOptions = AuditFields & {
   urlRemota: string;
   version: string;
   ultimaConexion: number | null;
+  /** Last presence reported by heartbeats (false until the gateway connects; terminals stay false). */
+  enLinea: boolean;
+  /** The gateway has an operational token (it enrolled at least once). */
+  enrolado: boolean;
 };
 
 export class DeviceEntity {
@@ -47,6 +51,8 @@ export class DeviceEntity {
   get urlRemota() { return this.values.urlRemota; }
   get version() { return this.values.version; }
   get ultimaConexion() { return this.values.ultimaConexion; }
+  get enLinea() { return this.values.enLinea; }
+  get enrolado() { return this.values.enrolado; }
 
   toJSON() {
     const { projectId: _projectId, ...contract } = this.values;
@@ -77,6 +83,8 @@ export class DeviceEntity {
       urlRemota: String(object.urlRemota ?? ""),
       version: String(object.version ?? ""),
       ultimaConexion: object.ultimaConexion instanceof Date ? object.ultimaConexion.getTime() : null,
+      enLinea: object.enLinea === true,
+      enrolado: object.enrolledAt instanceof Date,
       ...auditFieldsFromObject(object),
     });
   }

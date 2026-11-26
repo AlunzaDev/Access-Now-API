@@ -47,6 +47,19 @@ enum DeviceDirection {
   @@map("sentido_dispositivo")
 }
 
+/// What happened to a device; device_eventos is append-only (history).
+enum DeviceEventType {
+  TOKEN_GENERADO
+  ENROLADO
+  REENROLADO
+  CONECTADO
+  DESCONECTADO
+  ENROLAMIENTO_VENCIDO
+  ERROR
+
+  @@map("tipo_evento_dispositivo")
+}
+
 enum DeviceConfigStatus {
   PENDIENTE
   CONFIGURADA
@@ -166,6 +179,8 @@ model Device {
   urlRemota                String             @default("") @map("url_remota")
   version                  String             @default("")
   ultimaConexion           DateTime?          @map("ultima_conexion") @db.Timestamptz(3)
+  /// Last known presence, switched by heartbeats and the presence monitor (drives CONECTADO/DESCONECTADO events).
+  enLinea                  Boolean            @default(false) @map("en_linea")
   enrollmentTokenHash      String?            @map("enrollment_token_hash")
   enrollmentTokenExpiresAt DateTime?          @map("enrollment_token_expires_at") @db.Timestamptz(3)
   enrollmentDurationDays   Int?               @map("enrollment_duration_days")
@@ -183,6 +198,7 @@ model Device {
   project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
   gateway   Device?  @relation("GatewayTerminals", fields: [gatewayId], references: [id], onDelete: Restrict)
   terminals Device[] @relation("GatewayTerminals")
+  events    DeviceEvent[]
 
   @@unique([projectId, mac])
   @@index([projectId, tipo])
@@ -200,4 +216,20 @@ model UserProject {
   @@id([userId, projectId])
   @@index([projectId])
   @@map("usuario_proyectos")
+}
+
+/// Immutable history of a device: only inserts, never updates or deletes (except with the device).
+model DeviceEvent {
+  id          String          @id @default(uuid(7)) @db.Uuid
+  deviceId    String          @map("dispositivo_id") @db.Uuid
+  tipo        DeviceEventType
+  detalle     Json            @default("{}")
+  createdAt   DateTime        @default(now()) @map("created_at") @db.Timestamptz(3)
+  actorId     String?         @map("actor_id") @db.Uuid
+  actorNombre String          @default("Sistema") @map("actor_nombre")
+
+  device Device @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+
+  @@index([deviceId, createdAt])
+  @@map("dispositivo_eventos")
 }

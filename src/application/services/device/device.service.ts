@@ -9,13 +9,20 @@ import {
   validateTerminalGateway,
 } from "../../../domain/policies/device/device-policy";
 import type { DeviceRepository } from "../../../domain/repository/device/device.repository";
+import type { DeviceEvent } from "../../../domain/entities/device/device-event.entity";
+import type { DeviceStatus } from "../../../domain/entities/device/device-status.entity";
+import { enrollmentStatus, isOnline } from "../../../domain/policies/device/device-presence-policy";
 
 const HOUR_MS = 60 * 60 * 1000;
 const TOKEN_VALIDITY_HOURS = [1, 24, 168] as const;
 const ENROLLMENT_DURATION_DAYS = [30, 90] as const;
 
 export class DeviceService {
-  constructor(private readonly devices: DeviceRepository) {}
+  constructor(
+    private readonly devices: DeviceRepository,
+    /** A gateway without a heartbeat for this long counts as offline. */
+    private readonly offlineAfterMs: number,
+  ) {}
 
   async create(projectId: string, dto: CreateDeviceDto): Promise<DeviceEntity> {
     await this.validateMac(projectId, dto.values.mac);
@@ -89,6 +96,11 @@ export class DeviceService {
       expiresAt,
       options.duracionEnrolamientoDias,
     );
+    await this.devices.addEvent(id, "TOKEN_GENERADO", {
+      vigenciaHoras: options.vigenciaHoras,
+      duracionEnrolamientoDias: options.duracionEnrolamientoDias,
+      expiraEn: expiresAt.getTime(),
+    });
     return {
       token,
       expiraEn: expiresAt.getTime(),
@@ -116,6 +128,11 @@ export class DeviceService {
       enrolledAt,
       expiresAt,
     );
+    await this.devices.addEvent(device.id, stored.enrolledAt ? "REENROLADO" : "ENROLADO", {
+      fingerprint,
+      nombreDispositivo: deviceName,
+      expiraEn: expiresAt?.getTime() ?? null,
+    });
     return {
       token_type: "bearer",
       token: operationalToken,
@@ -126,6 +143,48 @@ export class DeviceService {
         settings: {},
       },
     };
+  }
+
+  /** Real status: online only with a recent heartbeat; terminals show their gateway's presence. */
+  async status(projectId: string, id: string): Promise<DeviceStatus> {
+    const device = await this.findDevice(projectId, id);
+    const now = Date.now();
+    const online = (target: DeviceEntity) => isOnline(target.ultimaConexion, now, this.offlineAfterMs);
+
+    if (device.tipo === "GATEWAY") {
+      const dates = await this.devices.findEnrollmentDates(device.id);
+      return {
+        tipo: device.tipo,
+        enLinea: online(device),
+        ultimaConexion: device.ultimaConexion,
+        umbralFueraDeLineaMs: this.offlineAfterMs,
+        enrolamiento: enrollmentStatus(
+          dates?.enrolledAt?.getTime() ?? null,
+          dates?.expiresAt?.getTime() ?? null,
+          now,
+        ),
+        configEstado: device.configEstado,
+        configError: device.configError,
+        gateway: null,
+      };
+    }
+
+    const gateway = device.gatewayId ? await this.devices.findById(projectId, device.gatewayId) : null;
+    return {
+      tipo: device.tipo,
+      enLinea: gateway ? online(gateway) : false,
+      ultimaConexion: gateway?.ultimaConexion ?? null,
+      umbralFueraDeLineaMs: this.offlineAfterMs,
+      enrolamiento: null,
+      configEstado: device.configEstado,
+      configError: device.configError,
+      gateway: gateway ? { id: gateway.id, nombre: gateway.nombre, enLinea: online(gateway) } : null,
+    };
+  }
+
+  async history(projectId: string, id: string, page: PageRequest): Promise<Page<DeviceEvent>> {
+    await this.findDevice(projectId, id);
+    return this.devices.listEvents(id, page);
   }
 
   private async findDevice(projectId: string, id: string): Promise<DeviceEntity> {
