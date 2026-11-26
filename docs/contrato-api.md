@@ -12,7 +12,7 @@ Toda respuesta de error usa el mismo cuerpo JSON:
 
 - `message` siempre es legible por el usuario; nunca incluye stack traces ni detalles internos.
 - `details` es `null` o un objeto con información estructurada (por ejemplo `{ "fields": ["correo"] }` en un duplicado, o `{ "retryAfterSeconds": 60 }` en un 429).
-- El backend construye el cuerpo con `ErrorService.send` / `ErrorService.handleApiError` (`api/middlewares/error-handler.ts`); no se responde `{ error }` ni `{ msg }`.
+- El backend construye el cuerpo con `ErrorService.send` / `ErrorService.handleApiError` (`api/middlewares/errors/error-handler.ts`); no se responde `{ error }` ni `{ msg }`.
 
 | Estado | Cuándo |
 |---|---|

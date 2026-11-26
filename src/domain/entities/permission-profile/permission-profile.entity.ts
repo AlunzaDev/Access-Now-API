@@ -1,5 +1,5 @@
-import { getInvalidUserModules, normalizeUserModules, type UserModuleAccess } from "../constants";
-import { CustomError } from "../errors/custom.error";
+import { getInvalidUserModules, normalizeUserModules, type UserModuleAccess } from "../../constants";
+import { CustomError } from "../../errors/custom.error";
 
 export interface PermissionProfileEntityOptions {
   id: string;

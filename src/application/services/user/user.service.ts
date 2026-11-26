@@ -1,16 +1,16 @@
 import { bcryptPlugin } from "../../../config/plugins/bcrypt.plugin";
 import type { UserRole } from "../../../domain/constants";
-import type { UserChanges, UserListFilters } from "../../../domain/datasources/user.datasource";
+import type { UserChanges, UserListFilters } from "../../../domain/datasources/user/user.datasource";
 import type { CreateUserDto, Page, PageRequest, UpdateUserDto } from "../../../domain/dtos";
-import { toPublicUser, type PublicUser, type UserEntity } from "../../../domain/entities/user.entity";
+import { toPublicUser, type PublicUser, type UserEntity } from "../../../domain/entities/user/user.entity";
 import { CustomError } from "../../../domain/errors/custom.error";
 import {
   assertCanManageUser,
   assertSelfChangeAllowed,
   roleNeedsProfile,
 } from "../../../domain/policies/user/user-management-policy";
-import type { PermissionProfileRepository } from "../../../domain/repository/permission-profile.repository";
-import type { UserRepository } from "../../../domain/repository/user.repository";
+import type { PermissionProfileRepository } from "../../../domain/repository/permission-profile/permission-profile.repository";
+import type { UserRepository } from "../../../domain/repository/user/user.repository";
 
 /** Who is making the request (from the session). */
 export type Actor = { id: string; rol: UserRole };

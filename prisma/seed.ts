@@ -8,7 +8,7 @@ import { existsSync } from "node:fs";
 import { resolve } from "node:path";
 import { hashSync } from "bcryptjs";
 import { PostgresDatabase } from "../src/infrastructure/prisma/postgres.database";
-import { USER_MODULES } from "../src/domain/constants/user-modules";
+import { USER_MODULES } from "../src/domain/constants/auth/user-modules";
 
 const appEnv = (process.env.APP_ENV ?? "dev").trim().toLowerCase();
 if (appEnv === "prod") throw new Error("The seed must not run against production.");

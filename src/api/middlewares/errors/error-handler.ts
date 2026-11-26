@@ -1,6 +1,6 @@
 import type { NextFunction, Request, Response } from "express";
-import { logger } from "../../config/logger";
-import { CustomError } from "../../domain/errors/custom.error";
+import { logger } from "../../../config/logger";
+import { CustomError } from "../../../domain/errors/custom.error";
 
 const INTERNAL_ERROR_MESSAGE = "Ocurrió un error inesperado";
 

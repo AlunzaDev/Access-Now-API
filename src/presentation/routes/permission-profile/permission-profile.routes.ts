@@ -1,5 +1,5 @@
 import { Router } from "express";
-import type { AuthMiddleware } from "../../../api/middlewares/auth.middleware";
+import type { AuthMiddleware } from "../../../api/middlewares/auth/auth.middleware";
 import { AUTH_ROLES } from "../../../domain/constants";
 import { buildPermissionProfileController } from "../../dependencies";
 

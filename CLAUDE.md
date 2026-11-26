@@ -11,6 +11,7 @@ Antes de escribir código, sigue estas guías; son obligatorias y el lint revisa
 
 Reglas rápidas:
 
+- Carpetas en orden **tipo / módulo / archivo** (`domain/entities/user/user.entity.ts`), una carpeta por módulo y un `index.ts` por tipo que exporta todo (docs/convencion-nombres.md).
 - Reglas de negocio en `domain/policies/<módulo>/` con su `*.test.ts`; los servicios solo orquestan.
 - `new` de servicios, middlewares y controladores solo en `presentation/dependencies`.
 - Errores con `CustomError` en servicios y `ErrorService` en controladores; nunca `res.json({ error })`.

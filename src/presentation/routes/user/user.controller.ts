@@ -1,6 +1,6 @@
 import type { Request, Response } from "express";
-import { sessionUser } from "../../../api/middlewares/auth.middleware";
-import { ErrorService } from "../../../api/middlewares/error-handler";
+import { sessionUser } from "../../../api/middlewares/auth/auth.middleware";
+import { ErrorService } from "../../../api/middlewares/errors/error-handler";
 import type { UserService } from "../../../application/services/user/user.service";
 import { CreateUserDto, parsePagination, parseSearch, UpdateUserDto } from "../../../domain/dtos";
 import { bodyOf, queryOf, routeParam } from "../shared/route-params";

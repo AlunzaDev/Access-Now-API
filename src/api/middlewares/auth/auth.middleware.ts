@@ -1,9 +1,9 @@
 import type { NextFunction, Request, Response } from "express";
-import type { SessionService, SessionUser } from "../../application/services/auth/session.service";
-import { JwtPlugin } from "../../config/plugins/jwt.plugin";
-import type { UserModuleAccess, UserRole } from "../../domain/constants";
-import { canOpenModule } from "../../domain/policies/auth/session-policy";
-import { ErrorService } from "./error-handler";
+import type { SessionService, SessionUser } from "../../../application/services/auth/session.service";
+import { JwtPlugin } from "../../../config/plugins/jwt.plugin";
+import type { UserModuleAccess, UserRole } from "../../../domain/constants";
+import { canOpenModule } from "../../../domain/policies/auth/session-policy";
+import { ErrorService } from "../errors/error-handler";
 
 type AuthenticatedRequest = Request & { usuario?: SessionUser };
 

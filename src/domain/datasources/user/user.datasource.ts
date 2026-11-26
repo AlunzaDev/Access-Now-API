@@ -1,5 +1,5 @@
-import type { Page, PageRequest } from "../dtos/shared/pagination";
-import type { UserEntity } from "../entities/user.entity";
+import type { Page, PageRequest } from "../../dtos/shared/pagination";
+import type { UserEntity } from "../../entities/user/user.entity";
 
 export type NewUser = Omit<UserEntity, "id">;
 

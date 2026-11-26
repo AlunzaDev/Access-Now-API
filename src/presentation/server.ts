@@ -1,7 +1,7 @@
 import cors, { type CorsOptions } from "cors";
 import express, { type Router } from "express";
 import type { Server as HttpServer } from "node:http";
-import { ErrorService } from "../api/middlewares/error-handler";
+import { ErrorService } from "../api/middlewares/errors/error-handler";
 import { logger } from "../config/logger";
 import { envs } from "../config/plugins/envs.plugin";
 import { PostgresDatabase } from "../infrastructure/prisma/postgres.database";

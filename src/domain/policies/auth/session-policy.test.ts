@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { USER_MODULES } from "../../constants";
-import { PermissionProfileEntity } from "../../entities/permission-profile.entity";
-import { UserEntity } from "../../entities/user.entity";
+import { PermissionProfileEntity } from "../../entities/permission-profile/permission-profile.entity";
+import { UserEntity } from "../../entities/user/user.entity";
 import { canOpenModule, resolveSessionModules } from "./session-policy";
 
 const user = (overrides: Partial<UserEntity> = {}) =>

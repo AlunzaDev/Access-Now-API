@@ -2,13 +2,13 @@ import type {
   NewPermissionProfile,
   PermissionProfileChanges,
   PermissionProfileDatasource,
-} from "../../domain/datasources/permission-profile.datasource";
-import { toPage, type Page, type PageRequest } from "../../domain/dtos/shared/pagination";
-import { PermissionProfileEntity } from "../../domain/entities/permission-profile.entity";
-import { CustomError } from "../../domain/errors/custom.error";
-import type { PermissionProfile, Prisma } from "../../generated/prisma/client";
-import { PostgresDatabase } from "../prisma/postgres.database";
-import { isUuid, withPrismaErrors } from "../prisma/prisma-errors";
+} from "../../../domain/datasources/permission-profile/permission-profile.datasource";
+import { toPage, type Page, type PageRequest } from "../../../domain/dtos/shared/pagination";
+import { PermissionProfileEntity } from "../../../domain/entities/permission-profile/permission-profile.entity";
+import { CustomError } from "../../../domain/errors/custom.error";
+import type { PermissionProfile, Prisma } from "../../../generated/prisma/client";
+import { PostgresDatabase } from "../../prisma/postgres.database";
+import { isUuid, withPrismaErrors } from "../../prisma/prisma-errors";
 
 const toEntity = (row: PermissionProfile) =>
   PermissionProfileEntity.fromObject({

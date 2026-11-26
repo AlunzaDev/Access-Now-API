@@ -2,7 +2,7 @@ import nodemailer from "nodemailer";
 import { existsSync } from "node:fs";
 import path from "node:path";
 import { envs } from "../../config";
-import type { EmailMessage, EmailSender } from "../../domain/ports/email-sender.port";
+import type { EmailMessage, EmailSender } from "../../domain/ports/email/email-sender.port";
 import { logger } from "../../config/logger";
 
 const LOGO_PATH = path.resolve(process.cwd(), "public", "email", "accessnow-icon.png");

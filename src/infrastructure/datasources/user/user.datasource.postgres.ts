@@ -3,13 +3,13 @@ import type {
   UserChanges,
   UserDatasource,
   UserListFilters,
-} from "../../domain/datasources/user.datasource";
-import { toPage, type Page, type PageRequest } from "../../domain/dtos/shared/pagination";
-import { UserEntity } from "../../domain/entities/user.entity";
-import { CustomError } from "../../domain/errors/custom.error";
-import type { Prisma, User } from "../../generated/prisma/client";
-import { PostgresDatabase } from "../prisma/postgres.database";
-import { isUuid, withPrismaErrors } from "../prisma/prisma-errors";
+} from "../../../domain/datasources/user/user.datasource";
+import { toPage, type Page, type PageRequest } from "../../../domain/dtos/shared/pagination";
+import { UserEntity } from "../../../domain/entities/user/user.entity";
+import { CustomError } from "../../../domain/errors/custom.error";
+import type { Prisma, User } from "../../../generated/prisma/client";
+import { PostgresDatabase } from "../../prisma/postgres.database";
+import { isUuid, withPrismaErrors } from "../../prisma/prisma-errors";
 
 const toEntity = (row: User): UserEntity =>
   UserEntity.fromObject({

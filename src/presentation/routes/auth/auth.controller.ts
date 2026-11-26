@@ -1,6 +1,6 @@
 import type { Request, Response } from "express";
-import { sessionUser } from "../../../api/middlewares/auth.middleware";
-import { ErrorService } from "../../../api/middlewares/error-handler";
+import { sessionUser } from "../../../api/middlewares/auth/auth.middleware";
+import { ErrorService } from "../../../api/middlewares/errors/error-handler";
 import type { AuthService } from "../../../application/services/auth/auth.service";
 import { ForgotPasswordDto, LoginDto, ResetPasswordDto } from "../../../domain/dtos";
 import { bodyOf, routeParam } from "../shared/route-params";

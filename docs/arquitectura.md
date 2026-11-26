@@ -44,11 +44,11 @@ src/
 Ejemplo: `GET /api/usuarios?buscar=ana&desde=0&limite=10`.
 
 1. **Ruta** (`presentation/routes/user/user.routes.ts`): aplica `requireAuth` y `requireModules("users")`.
-2. **Middleware** (`api/middlewares/auth.middleware.ts`): valida el token y vuelve a leer el usuario y su perfil con `SessionService`; aplica `domain/policies/auth/session-policy`.
+2. **Middleware** (`api/middlewares/auth/auth.middleware.ts`): valida el token y vuelve a leer el usuario y su perfil con `SessionService`; aplica `domain/policies/auth/session-policy`.
 3. **Controlador** (`user.controller.ts`): lee la petición con `parsePagination` y `parseSearch` de `domain/dtos` y responde.
 4. **Servicio** (`application/services/user/user.service.ts`): recibe los repositorios por constructor (interfaces de `domain/repository`) y aplica las reglas de `domain/policies/user`.
-5. **Repositorio** (`infrastructure/repositories/user.repository.impl.ts`): cumple la interfaz y llama a su datasource. No tiene lógica.
-6. **Datasource** (`infrastructure/datasources/user.datasource.postgres.ts`): consulta con Prisma y devuelve `{ items, total }`.
+5. **Repositorio** (`infrastructure/repositories/user/user.repository.impl.ts`): cumple la interfaz y llama a su datasource. No tiene lógica.
+6. **Datasource** (`infrastructure/datasources/user/user.datasource.postgres.ts`): consulta con Prisma y devuelve `{ items, total }`.
 
 Para agregar una operación:
 1. Método en la interfaz del datasource (`domain/datasources`) y en sus implementaciones (`infrastructure`).

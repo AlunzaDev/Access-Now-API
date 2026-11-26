@@ -1,7 +1,7 @@
-import type { NewUser, UserChanges, UserDatasource, UserListFilters } from "../../domain/datasources/user.datasource";
-import type { Page, PageRequest } from "../../domain/dtos/shared/pagination";
-import type { UserEntity } from "../../domain/entities/user.entity";
-import type { UserRepository } from "../../domain/repository/user.repository";
+import type { NewUser, UserChanges, UserDatasource, UserListFilters } from "../../../domain/datasources/user/user.datasource";
+import type { Page, PageRequest } from "../../../domain/dtos/shared/pagination";
+import type { UserEntity } from "../../../domain/entities/user/user.entity";
+import type { UserRepository } from "../../../domain/repository/user/user.repository";
 
 /** Delegates to its datasource. A repository has no logic (docs/arquitectura.md). */
 export class UserRepositoryImpl implements UserRepository {

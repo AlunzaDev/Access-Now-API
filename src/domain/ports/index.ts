@@ -1,1 +1,1 @@
-export * from "./email-sender.port";
+export * from "./email/email-sender.port";

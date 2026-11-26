@@ -1,5 +1,5 @@
-import { isUserRole, type UserRole } from "../constants";
-import { CustomError } from "../errors/custom.error";
+import { isUserRole, type UserRole } from "../../constants";
+import { CustomError } from "../../errors/custom.error";
 
 export interface UserEntityOptions {
   id: string;

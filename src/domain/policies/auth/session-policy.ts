@@ -1,6 +1,6 @@
 import { AUTH_ROLES, USER_MODULES, type UserModuleAccess } from "../../constants";
-import type { PermissionProfileEntity } from "../../entities/permission-profile.entity";
-import type { UserEntity } from "../../entities/user.entity";
+import type { PermissionProfileEntity } from "../../entities/permission-profile/permission-profile.entity";
+import type { UserEntity } from "../../entities/user/user.entity";
 import { CustomError } from "../../errors/custom.error";
 
 /**

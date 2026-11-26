@@ -35,18 +35,26 @@ Todo en kebab-case: `create-user.dto.ts`, `permission-profile/`, `reset-password
 
 Sufijos por tipo: `.entity.ts`, `.dto.ts`, `.datasource.ts`, `.datasource.postgres.ts`, `.repository.ts`, `.repository.impl.ts`, `.service.ts`, `.controller.ts`, `.routes.ts`, `.port.ts`, `-policy.ts`, `.test.ts`.
 
-## Orden de carpetas
+## Orden de carpetas: tipo / módulo / archivo
 
-Primero la capa y el tipo, luego el módulo, al final el archivo. Nunca al revés.
+Primero la capa y el tipo, luego el módulo (una carpeta por módulo, aunque tenga un solo archivo) y al final el archivo. Cada tipo tiene un `index.ts` que exporta todo lo de sus módulos. Nunca al revés (`user/dtos/...`) ni archivos sueltos de un módulo directo en el tipo.
 
 ```
-domain/dtos/user/create-user.dto.ts            tipo / módulo / archivo
-domain/policies/auth/session-policy.ts          tipo / módulo / archivo
-application/services/user/user.service.ts       tipo / módulo / archivo
-presentation/routes/user/user.controller.ts     tipo / módulo / archivo
+domain/entities/user/user.entity.ts                         tipo / módulo / archivo
+domain/entities/index.ts                                    exporta todos los módulos
+domain/datasources/user/user.datasource.ts
+domain/repository/user/user.repository.ts
+domain/dtos/user/create-user.dto.ts
+domain/policies/auth/session-policy.ts (+ session-policy.test.ts)
+domain/ports/email/email-sender.port.ts
+application/services/user/user.service.ts
+infrastructure/datasources/user/user.datasource.postgres.ts
+infrastructure/repositories/user/user.repository.impl.ts
+api/middlewares/auth/auth.middleware.ts
+presentation/routes/user/user.controller.ts, user.routes.ts
 ```
 
-No se usa `user/dtos/...` ni `user/services/...`.
+Un módulo nuevo (por ejemplo `project`) agrega su carpeta en cada tipo que use y su línea en el `index.ts` de ese tipo. Lo transversal sin módulo (`domain/errors`, `domain/helpers`, `config`, `infrastructure/prisma`) va directo en su carpeta.
 
 ## Cómo mover o renombrar
 

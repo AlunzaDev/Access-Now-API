@@ -2,10 +2,10 @@ import type {
   NewPermissionProfile,
   PermissionProfileChanges,
   PermissionProfileDatasource,
-} from "../../domain/datasources/permission-profile.datasource";
-import type { Page, PageRequest } from "../../domain/dtos/shared/pagination";
-import type { PermissionProfileEntity } from "../../domain/entities/permission-profile.entity";
-import type { PermissionProfileRepository } from "../../domain/repository/permission-profile.repository";
+} from "../../../domain/datasources/permission-profile/permission-profile.datasource";
+import type { Page, PageRequest } from "../../../domain/dtos/shared/pagination";
+import type { PermissionProfileEntity } from "../../../domain/entities/permission-profile/permission-profile.entity";
+import type { PermissionProfileRepository } from "../../../domain/repository/permission-profile/permission-profile.repository";
 
 /** Delegates to its datasource. A repository has no logic (docs/arquitectura.md). */
 export class PermissionProfileRepositoryImpl implements PermissionProfileRepository {

@@ -2,7 +2,7 @@ import express from "express";
 import { randomUUID } from "node:crypto";
 import type { Server } from "node:http";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { ErrorService } from "../../src/api/middlewares/error-handler";
+import { ErrorService } from "../../src/api/middlewares/errors/error-handler";
 import { bcryptPlugin } from "../../src/config/plugins/bcrypt.plugin";
 import { PostgresDatabase } from "../../src/infrastructure/prisma/postgres.database";
 import { AppRoutes } from "../../src/presentation/routes/routes";

@@ -1,6 +1,6 @@
 // The only place where services, middlewares and controllers are created (`new`).
 // Routes ask for what they need with build*(); nothing else instantiates classes.
-import { createAuthMiddleware } from "../../api/middlewares/auth.middleware";
+import { createAuthMiddleware } from "../../api/middlewares/auth/auth.middleware";
 import { AuthService } from "../../application/services/auth/auth.service";
 import { SessionService } from "../../application/services/auth/session.service";
 import { PermissionProfileService } from "../../application/services/permission-profile/permission-profile.service";
@@ -11,7 +11,7 @@ import { AuthController } from "../routes/auth/auth.controller";
 import { HealthController } from "../routes/health/health.controller";
 import { PermissionProfileController } from "../routes/permission-profile/permission-profile.controller";
 import { UserController } from "../routes/user/user.controller";
-import { buildPermissionProfileRepository, buildUserRepository } from "./repositories.dependencies";
+import { buildPermissionProfileRepository, buildUserRepository } from "./repositories/repositories.dependencies";
 
 const buildSessionService = () => new SessionService(buildUserRepository(), buildPermissionProfileRepository());
 

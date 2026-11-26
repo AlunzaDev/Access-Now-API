@@ -1,5 +1,5 @@
 import type { Request, Response } from "express";
-import { ErrorService } from "../../../api/middlewares/error-handler";
+import { ErrorService } from "../../../api/middlewares/errors/error-handler";
 import type { PermissionProfileService } from "../../../application/services/permission-profile/permission-profile.service";
 import { USER_MODULES } from "../../../domain/constants";
 import {

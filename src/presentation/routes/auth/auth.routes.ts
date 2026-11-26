@@ -1,6 +1,6 @@
 import { Router } from "express";
-import type { AuthMiddleware } from "../../../api/middlewares/auth.middleware";
-import { loginAttemptLimiter, rateLimitMiddleware } from "../../../api/middlewares/rate-limit.middleware";
+import type { AuthMiddleware } from "../../../api/middlewares/auth/auth.middleware";
+import { loginAttemptLimiter, rateLimitMiddleware } from "../../../api/middlewares/rate-limit/rate-limit.middleware";
 import { envs } from "../../../config";
 import { buildAuthController } from "../../dependencies";
 

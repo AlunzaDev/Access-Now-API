@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { ErrorService } from "../../api/middlewares/error-handler";
+import { ErrorService } from "../../api/middlewares/errors/error-handler";
 import { buildAuthMiddleware } from "../dependencies";
 import { AuthRoutes } from "./auth/auth.routes";
 import { HealthRoutes } from "./health/health.routes";

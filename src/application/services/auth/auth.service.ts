@@ -5,8 +5,8 @@ import { bcryptPlugin } from "../../../config/plugins/bcrypt.plugin";
 import { JwtPlugin } from "../../../config/plugins/jwt.plugin";
 import type { ForgotPasswordDto, LoginDto, ResetPasswordDto } from "../../../domain/dtos";
 import { CustomError } from "../../../domain/errors/custom.error";
-import type { EmailSender } from "../../../domain/ports/email-sender.port";
-import type { UserRepository } from "../../../domain/repository/user.repository";
+import type { EmailSender } from "../../../domain/ports/email/email-sender.port";
+import type { UserRepository } from "../../../domain/repository/user/user.repository";
 import type { SessionService, SessionUser } from "./session.service";
 
 const PASSWORD_RESET_WINDOW_MS = 30 * 60 * 1000;

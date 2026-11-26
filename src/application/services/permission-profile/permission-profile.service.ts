@@ -4,10 +4,10 @@ import type {
   PageRequest,
   UpdatePermissionProfileDto,
 } from "../../../domain/dtos";
-import type { PermissionProfileEntity } from "../../../domain/entities/permission-profile.entity";
+import type { PermissionProfileEntity } from "../../../domain/entities/permission-profile/permission-profile.entity";
 import { CustomError } from "../../../domain/errors/custom.error";
-import type { PermissionProfileRepository } from "../../../domain/repository/permission-profile.repository";
-import type { UserRepository } from "../../../domain/repository/user.repository";
+import type { PermissionProfileRepository } from "../../../domain/repository/permission-profile/permission-profile.repository";
+import type { UserRepository } from "../../../domain/repository/user/user.repository";
 
 export class PermissionProfileService {
   constructor(

@@ -1,5 +1,5 @@
 import type { NextFunction, Request, Response } from "express";
-import { ErrorService } from "./error-handler";
+import { ErrorService } from "../errors/error-handler";
 
 interface RateLimitOptions {
   windowMs: number;
