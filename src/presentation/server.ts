@@ -1,8 +1,10 @@
 import cors, { type CorsOptions } from "cors";
 import express, { type Router } from "express";
 import type { Server as HttpServer } from "node:http";
+import { ErrorService } from "../api/middlewares/error-handler";
+import { logger } from "../config/logger";
 import { envs } from "../config/plugins/envs.plugin";
-import { PostgresDatabase } from "../data/postgres";
+import { PostgresDatabase } from "../infrastructure/prisma/postgres.database";
 
 interface ServerOptions {
   host?: string;
@@ -62,12 +64,10 @@ export class Server {
     this.app.use(express.static(this.publicPath));
     this.app.use(this.routes);
 
-    this.app.use((_req, res) => {
-      res.status(404).json({ error: "Ruta no encontrada" });
-    });
+    this.app.use(ErrorService.middleware);
 
     this.httpServer = this.app.listen(this.port, this.host, () => {
-      console.log(`[ACCESS NOW] Server running on ${this.host}:${this.port}`);
+      logger.info(`Access Now API en ${this.host}:${this.port}`);
     });
 
     process.once("SIGTERM", () => void this.shutdown("SIGTERM"));
@@ -78,10 +78,10 @@ export class Server {
   private async shutdown(signal: string): Promise<void> {
     if (this.shuttingDown) return;
     this.shuttingDown = true;
-    console.log(`[ACCESS NOW] ${signal} received, shutting down`);
+    logger.info(`${signal} recibido, cerrando`);
 
     const forceExit = setTimeout(() => {
-      console.error("[ACCESS NOW] Shutdown timed out, forcing exit");
+      logger.error("El cierre tardó demasiado, se fuerza la salida");
       process.exit(1);
     }, 10_000);
     forceExit.unref();
@@ -95,7 +95,7 @@ export class Server {
       await PostgresDatabase.disconnect();
       process.exit(0);
     } catch (error) {
-      console.error("[ACCESS NOW] Error during shutdown", error);
+      logger.error("Error durante el cierre", error);
       process.exit(1);
     }
   }

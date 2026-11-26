@@ -1,14 +1,14 @@
-import { envs } from "./config";
+import { envs, logger } from "./config";
 import { AppRoutes } from "./presentation/routes/routes";
 import { Server } from "./presentation/server";
 
 process.on("unhandledRejection", (reason) => {
-  console.error("[UNHANDLED REJECTION]", reason);
+  logger.error("Promesa rechazada sin manejar", reason);
   process.exit(1);
 });
 
 process.on("uncaughtException", (error) => {
-  console.error("[UNCAUGHT EXCEPTION]", error);
+  logger.error("Excepción no capturada", error);
   process.exit(1);
 });
 
@@ -24,6 +24,6 @@ const bootstrap = async () => {
 };
 
 bootstrap().catch((error) => {
-  console.error("[STARTUP ERROR]", error);
+  logger.error("No se pudo arrancar el servidor", error);
   process.exit(1);
 });

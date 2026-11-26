@@ -1,16 +1,18 @@
 {
   "name": "access-now-api",
   "version": "0.1.0",
-  "description": "API de Access Now: eventos, boletos y validación para scanners",
+  "description": "API de Access Now: eventos, boletos y validaci\u00c3\u00b3n para scanners",
   "private": true,
   "main": "dist/app.js",
   "scripts": {
     "dev": "node scripts/dev.mjs",
     "build": "prisma generate && tsc",
     "start": "node dist/app.js",
-    "check": "prisma generate && tsc --noEmit && tsc -p tests",
+    "typecheck": "prisma generate && tsc -p tsconfig.typecheck.json",
+    "lint": "eslint src tests",
     "test": "vitest run",
     "test:watch": "vitest",
+    "verify": "npm run typecheck && npm run lint && npm test",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:migrate:deploy": "prisma migrate deploy",
@@ -30,15 +32,19 @@
     "pg": "8.23.1"
   },
   "devDependencies": {
+    "@eslint/js": "^9.39.5",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.3",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^24.0.10",
     "@types/nodemailer": "^8.0.2",
     "@types/pg": "8.23.1",
+    "eslint": "^9.39.5",
+    "globals": "^17.14.0",
     "prisma": "7.10.1",
     "tsx": "4.23.15",
     "typescript": "^6.0.3",
+    "typescript-eslint": "^8.74.0",
     "vitest": "^5.1.2"
   },
   "allowScripts": {

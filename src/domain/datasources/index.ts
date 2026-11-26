@@ -1,2 +1,2 @@
-export * from "./auth/usuario.datasource";
-export * from "./auth/permission-profile.datasource";
+export * from "./user.datasource";
+export * from "./permission-profile.datasource";

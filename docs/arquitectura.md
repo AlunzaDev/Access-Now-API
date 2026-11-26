@@ -1,70 +1,102 @@
-# Arquitectura del código
+# Arquitectura del backend
 
-Cómo se organiza `src/` y qué va en cada capa. Es la misma estructura de VIGGO ADMINISTRATIVO, de donde se tomó la base. Si algo no encaja en estas reglas, se discute y se documenta aquí antes de hacer una excepción.
+Cada capa conoce solo a las de adentro. Las reglas de negocio no dependen de Express ni de Prisma, y cambiar cómo se guarda algo no toca los servicios. Es la misma idea que COTIZA (`cotizapp-backend/docs/arquitectura.md`) y que el dashboard (`Access-Now-Frontend/docs/arquitectura.md`).
 
-## Capas
+## Las capas
 
-```text
-routes → controller → service → repository → datasource → PostgreSQL
-                         ↑            ↑            ↑
-                      domain (entidades, DTOs, contratos abstractos, errores)
+```
+src/
+  domain/            El negocio, sin Express, Prisma ni librerías de red:
+    constants/         roles y módulos del dashboard (valores guardados)
+    entities/          cómo son un usuario, un perfil, un proyecto…
+    dtos/              validan y normalizan lo que llega (cuerpos, filtros, paginación)
+    datasources/       interfaces de las fuentes de datos
+    repository/        interfaces que usan los servicios (hoy iguales a los datasources)
+    policies/          reglas puras por módulo: sesión, gestión de usuarios, contraseña…
+    ports/             otras dependencias externas: correo (y luego archivos, pagos)
+    errors/            CustomError
+    helpers/           utilidades puras (isUuid)
+  application/
+    services/          orquestan un caso: cargan datos con los repositorios y aplican las policies
+  infrastructure/    Cómo se habla con el mundo de afuera:
+    prisma/            conexión a PostgreSQL y traducción de errores de Prisma
+    datasources/       consultas con Prisma (convierten filas en entidades)
+    repositories/      implementan las interfaces de domain usando los datasources
+    email/             SMTP con nodemailer (implementa EmailSender)
+  api/middlewares/   autenticación, módulos y roles, límites de intentos, manejo de errores
+  presentation/
+    routes/            rutas y controladores por módulo
+    dependencies/      el único lugar donde se crean (new) servicios, middlewares y controladores
+    server.ts          Express
+  config/            variables de entorno, logger, JWT, bcrypt y plantillas HTML
+  generated/         cliente de Prisma (no se versiona; `npm run typecheck` lo genera)
+  app.ts             arranca el servidor
 ```
 
-| Carpeta | Qué va | Qué **no** va |
-|---|---|---|
-| `domain/entities`, `domain/dtos` | Entidades y validación de entrada (`XDto.create(body) → [error, dto]`). | Express, Prisma, `fs`, variables de entorno. |
-| `domain/datasources`, `domain/repositories` | Contratos abstractos: qué datos se leen y escriben, con tipos del dominio. | Implementaciones. |
-| `domain/constants` | Roles (`SUPER_ROLE`, `ADMIN_ROLE`) y módulos del dashboard. | — |
-| `domain/errors`, `domain/helpers` | `CustomError` y utilidades puras (por ejemplo `isUuid`). | — |
-| `infrastructure/datasources` | Implementación con Prisma de cada datasource. Convierte filas en entidades. | Reglas de negocio; imports de `presentation/`. |
-| `infrastructure/repositories` | Implementación del repositorio: delega en el datasource. | Lógica (ver "Repositorios"). |
-| `presentation/services` | **Toda** la lógica de negocio: reglas, validaciones de estado, orquestación de repositorios. Lanza `CustomError`. | `req`/`res`, Prisma, `PostgresDatabase`. |
-| `presentation/routes/<módulo>/*.controller.ts` | HTTP: lee el request, arma el DTO, llama al servicio y responde. | Reglas de negocio, consultas a la base. |
-| `presentation/routes/<módulo>/*.routes.ts` | Solo rutas y middlewares (`router.get("/", auth, controller.list)`). | Handlers, `new` de clases, consultas. |
-| `presentation/dependencies` | Único lugar donde se crean (`new`) datasources, repositorios, servicios y controllers: `buildXController()`. `repositories.dependencies.ts` solo importa de `infrastructure/`. | Lógica. |
-| `presentation/middlewares` | Autenticación, permisos, límites de intentos. Solo importan de `repositories.dependencies` (los controllers importan el middleware; importar los builders de controllers sería un ciclo). | — |
-| `config/plugins` | Adaptadores de librerías usadas por varias capas: JWT, bcrypt, variables de entorno. | Reglas de negocio. |
-
-Dirección de dependencias: `presentation → domain ← infrastructure`. El dominio no importa nada de las otras capas; `infrastructure` no importa de `presentation`.
-
-## Un controller "bien"
-
-```ts
-create = async (req: Request, res: Response) => {
-  try {
-    const [error, dto] = CreateUsuarioDto.create(req.body ?? {});
-    if (error) return res.status(400).json({ error });
-    return res.status(201).json({ usuario: await this.usuarioService.create(dto!) });
-  } catch (error) {
-    return ErrorService.handleApiError(error, res);
-  }
-};
+```
+  presentation, api  ──►  application  ──►  domain  ◄──  infrastructure
+          │                                                  ▲
+          └──────────── arman las dependencias ──────────────┘
 ```
 
-- Las reglas ("un administrador necesita un perfil activo", "no puedes eliminar tu propia cuenta") viven en el servicio y se expresan con `CustomError.conflict(...)`, `CustomError.badRequest(...)`, etc.
-- `ErrorService.handleApiError` traduce el error al código HTTP y al formato común `{ error, code, details }`. Un error inesperado responde 500 sin detalles internos.
+## El camino de una petición
+
+Ejemplo: `GET /api/usuarios?buscar=ana&desde=0&limite=10`.
+
+1. **Ruta** (`presentation/routes/user/user.routes.ts`): aplica `requireAuth` y `requireModules("users")`.
+2. **Middleware** (`api/middlewares/auth.middleware.ts`): valida el token y vuelve a leer el usuario y su perfil con `SessionService`; aplica `domain/policies/auth/session-policy`.
+3. **Controlador** (`user.controller.ts`): lee la petición con `parsePagination` y `parseSearch` de `domain/dtos` y responde.
+4. **Servicio** (`application/services/user/user.service.ts`): recibe los repositorios por constructor (interfaces de `domain/repository`) y aplica las reglas de `domain/policies/user`.
+5. **Repositorio** (`infrastructure/repositories/user.repository.impl.ts`): cumple la interfaz y llama a su datasource. No tiene lógica.
+6. **Datasource** (`infrastructure/datasources/user.datasource.postgres.ts`): consulta con Prisma y devuelve `{ items, total }`.
+
+Para agregar una operación:
+1. Método en la interfaz del datasource (`domain/datasources`) y en sus implementaciones (`infrastructure`).
+2. Si tiene reglas, una función pura en `domain/policies/<módulo>/` con su prueba (`*.test.ts` al lado).
+3. El servicio carga los datos y llama a la regla; lanza `CustomError` para lo que no se permite.
+4. DTO en `domain/dtos/<módulo>/` si recibe un cuerpo o filtros.
+5. Controlador y ruta en `presentation/routes/<módulo>/`; el builder en `presentation/dependencies`.
+6. Prueba de integración en `tests/integration` para permisos, errores y la forma de la respuesta.
+
+Si un servicio necesita algo que no es un repositorio (mandar un correo, guardar un archivo, cobrar), se agrega una interfaz en `domain/ports` y su implementación en `infrastructure`; `presentation/dependencies` las conecta.
+
+## Qué se puede importar
+
+La regla `no-restricted-imports` de `eslint.config.mjs` lo revisa en cada `npm run lint`:
+
+| Capa | No puede importar |
+|---|---|
+| `domain` | `application`, `infrastructure`, `api`, `presentation`, `generated`, ni `express`, Prisma, `nodemailer`, `jsonwebtoken` o `bcryptjs` |
+| `application` | `infrastructure`, `api`, `presentation`, `generated`, ni `express`, Prisma o `nodemailer` |
+| `infrastructure` | `application`, `api`, `presentation` |
+| `api` | `presentation`, `infrastructure`, `generated` (recibe lo que necesita por parámetro) |
+| `presentation` | todo está permitido: aquí se arman las dependencias |
+
+`config` lo pueden usar todas. Las pruebas (`*.test.ts`, `tests/`) pueden importar lo que necesiten.
+
+Otras reglas del lint: sin `any` (salvo pruebas), `import type` para lo que solo es tipo, sin variables sin usar y sin `console` (se usa `config/logger.ts`).
+
+## Dónde va cada archivo
+
+| Es… | Va en |
+|---|---|
+| Una regla de negocio sin datos externos | `domain/policies/<módulo>/` |
+| La validación de un cuerpo, filtro o paginación | `domain/dtos/<módulo>/` |
+| Un caso que carga datos y aplica reglas | `application/services/<módulo>/` |
+| Una consulta a la base | `infrastructure/datasources/` |
+| Algo que toca red, disco o un proveedor | `infrastructure/<tema>/`, con su interfaz en `domain/ports` |
+| Un middleware de Express | `api/middlewares/` |
+| Una ruta o controlador | `presentation/routes/<módulo>/` |
+| Crear instancias (`new`) | `presentation/dependencies/` |
+
+Los nombres de archivos y carpetas siguen [convencion-nombres.md](convencion-nombres.md); el formato de respuestas y errores, [contrato-api.md](contrato-api.md); cómo probar, [pruebas.md](pruebas.md).
 
 ## Autenticación y permisos
 
-- El dashboard inicia sesión con `POST /api/auth/login` (`correo`, `password`) y manda el token en `Authorization: Bearer <token>`. El token solo lleva el id del usuario.
-- `AuthMiddleware.requireAuth` vuelve a leer el usuario y su perfil en **cada** petición (`SessionResolver`): desactivar un usuario o su perfil corta el acceso de inmediato, sin esperar a que el token expire.
-- `SUPER_ROLE` abre todos los módulos y no lleva perfil. `ADMIN_ROLE` abre solo los módulos de su perfil (`requireModules("events")`, etc.).
-- Solo un super administrador puede crear, cambiar o eliminar a otro super administrador (`protectSuperUser`).
+- El dashboard inicia sesión con `POST /api/auth/login` y manda el token en `Authorization: Bearer <token>`. El token solo lleva el id del usuario.
+- `requireAuth` vuelve a leer el usuario y su perfil en **cada** petición: desactivar un usuario o su perfil corta el acceso de inmediato.
+- `SUPER_ROLE` abre todos los módulos y no lleva perfil. `ADMIN_ROLE` abre solo los módulos de su perfil (`requireModules`). El perfil es global (los mismos módulos en todos sus proyectos).
+- Solo un super administrador puede crear, cambiar o eliminar a otro super administrador, y nadie puede desactivarse, cambiarse el rol o eliminarse a sí mismo (`domain/policies/user/user-management-policy.ts`).
 - Los scanners (SCAT) tendrán su propia autenticación por dispositivo (#7); no usan usuarios del dashboard.
-
-## Repositorios
-
-Hoy solo reenvían al datasource. Se conservan para que un servicio dependa de un contrato del dominio y no de una implementación. Regla: **un repositorio no tiene lógica**; si algo decide, va en el servicio.
-
-## Módulo nuevo: lista de verificación
-
-1. Entidad y DTOs en `domain/`, con su validación.
-2. Contrato del datasource (y del repositorio) en `domain/`.
-3. Implementación en `infrastructure/`.
-4. Servicio en `presentation/services/<módulo>` con las reglas.
-5. Controller y routes en `presentation/routes/<módulo>`; montar en `routes/routes.ts`.
-6. `buildXController()` en `presentation/dependencies`.
-7. Si es una sección del dashboard: agregar el módulo a `enum UserModule` (schema) y a `domain/constants/user-modules.ts`.
-8. Pruebas de integración con PostgreSQL real (`tests/integration`) para las reglas del servicio y los permisos de las rutas.
 
 Excepciones conocidas: `server.ts` conecta la base al arrancar y `routes/health` consulta el estado de la conexión; ambos usan `PostgresDatabase` directamente porque ese es su propósito.

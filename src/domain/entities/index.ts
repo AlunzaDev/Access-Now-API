@@ -1,2 +1,2 @@
-export * from "./auth/usuario.entity";
-export * from "./auth/permission-profile.entity";
+export * from "./user.entity";
+export * from "./permission-profile.entity";

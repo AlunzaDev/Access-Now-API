@@ -1,10 +1,11 @@
 import { Router } from "express";
+import type { AuthMiddleware } from "../../../api/middlewares/auth.middleware";
+import { loginAttemptLimiter, rateLimitMiddleware } from "../../../api/middlewares/rate-limit.middleware";
 import { envs } from "../../../config";
 import { buildAuthController } from "../../dependencies";
-import { AuthMiddleware, loginAttemptLimiter, rateLimitMiddleware } from "../../middlewares";
 
 export class AuthRoutes {
-  static get routes(): Router {
+  static routes(auth: AuthMiddleware): Router {
     const router = Router();
     const controller = buildAuthController();
 
@@ -18,7 +19,7 @@ export class AuthRoutes {
     const emailLimit = rateLimitMiddleware({ windowMs: 15 * 60 * 1000, maxRequests: 4 });
 
     router.post("/login", loginLimit, controller.login);
-    router.get("/renew", AuthMiddleware.requireAuth, controller.renew);
+    router.get("/renew", auth.requireAuth, controller.renew);
     router.post("/forgot-password", emailLimit, controller.forgotPassword);
     router.get("/reset-password/:token", controller.renderResetPasswordPage);
     router.post("/reset-password", strictLimit, controller.resetPassword);

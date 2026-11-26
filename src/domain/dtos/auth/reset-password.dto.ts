@@ -1,4 +1,4 @@
-import { passwordPolicyPlugin } from "../../../config/plugins/password-policy.plugin";
+import { isValidPassword, PASSWORD_POLICY_MESSAGE } from "../../policies/user/password-policy";
 
 export class ResetPasswordDto {
   private constructor(
@@ -13,7 +13,7 @@ export class ResetPasswordDto {
 
     if (!token) return ["'token' es requerido"];
     if (!newPassword) return ["'newPassword' es requerido"];
-    if (!passwordPolicyPlugin.isValid(newPassword)) return [passwordPolicyPlugin.message];
+    if (!isValidPassword(newPassword)) return [PASSWORD_POLICY_MESSAGE];
     if (confirmPassword !== undefined && confirmPassword !== newPassword) {
       return ["Las contraseñas no coinciden"];
     }

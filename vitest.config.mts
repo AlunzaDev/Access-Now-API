@@ -14,7 +14,7 @@ Object.assign(process.env, appDefaults, testEnv);
 
 export default defineConfig({
   test: {
-    include: ["tests/**/*.test.ts"],
+    include: ["src/**/*.test.ts", "tests/**/*.test.ts"],
     env: { ...appDefaults, ...testEnv },
     globalSetup: ["tests/setup/global-setup.ts"],
     setupFiles: ["tests/setup/app-env.ts"],

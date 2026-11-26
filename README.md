@@ -2,7 +2,7 @@
 
 Backend de Access Now: eventos, boletos y validación para los scanners (SCAT). Node 22+, Express 5, Prisma 7 y PostgreSQL 17.
 
-La base (capas, plugins, middlewares, Docker) viene de VIGGO ADMINISTRATIVO; ver [docs/arquitectura.md](docs/arquitectura.md).
+La base viene de VIGGO ADMINISTRATIVO y las reglas de calidad y arquitectura de COTIZA; ver [docs/arquitectura.md](docs/arquitectura.md).
 
 ## Desarrollo local
 
@@ -19,30 +19,19 @@ Sin `SEED_ADMIN_PASSWORD`, el seed genera una contraseña y la muestra una sola 
 
 Sin `MAILER_*` la API funciona, pero no envía correos (recuperación de contraseña y, más adelante, boletos).
 
-## Pruebas
+## Calidad
 
 ```bash
 cp .env.test.example .env.test
-npm test
+npm run verify        # typecheck + lint + pruebas (unitarias e integración)
 ```
 
-Las pruebas de integración usan la base `access_now_test` (el nombre debe terminar en `_test`) y aplican las migraciones antes de correr.
+- Arquitectura y reglas de capas: [docs/arquitectura.md](docs/arquitectura.md)
+- Nombres: [docs/convencion-nombres.md](docs/convencion-nombres.md)
+- Contrato (errores, paginación, endpoints): [docs/contrato-api.md](docs/contrato-api.md)
+- Pruebas: [docs/pruebas.md](docs/pruebas.md)
 
-En Windows, corre `npm test` desde una ruta con la unidad en mayúscula (`C:\...`). Si la terminal abre la carpeta como `c:\...`, vitest carga sus módulos dos veces y falla con `Cannot read properties of undefined (reading 'config')`.
-
-## Endpoints
-
-| Método y ruta | Quién | Qué hace |
-|---|---|---|
-| `GET /api/ping`, `GET /api/health` | Público | Vida del servicio y estado de la base. |
-| `POST /api/auth/login` | Público | `{ correo, password }` → `{ token, usuario }` (con `modules`). Limita los intentos fallidos. |
-| `GET /api/auth/renew` | Sesión | Token nuevo y usuario actualizado. |
-| `POST /api/auth/forgot-password` | Público | Manda el enlace de recuperación (misma respuesta exista o no la cuenta). |
-| `GET/POST /api/auth/reset-password` | Público | Página y envío de la contraseña nueva. |
-| `/api/usuarios` | Módulo `users` | CRUD de usuarios del dashboard. Eliminar: solo `SUPER_ROLE`. |
-| `/api/permission-profiles` | Módulo `permissionProfiles` | CRUD de perfiles; `GET /modules` lista los módulos disponibles. Eliminar: solo `SUPER_ROLE`. |
-
-Roles: `SUPER_ROLE` abre todo; `ADMIN_ROLE` abre los módulos de su perfil de permisos (`users`, `permissionProfiles`, `events`, `tickets`, `scanners`, `orders`).
+En Windows, corre las pruebas desde una ruta con la unidad en mayúscula (`C:\...`); ver docs/pruebas.md.
 
 ## Docker (producción)
 

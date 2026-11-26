@@ -7,7 +7,7 @@ import { randomBytes } from "node:crypto";
 import { existsSync } from "node:fs";
 import { resolve } from "node:path";
 import { hashSync } from "bcryptjs";
-import { PostgresDatabase } from "../src/data/postgres";
+import { PostgresDatabase } from "../src/infrastructure/prisma/postgres.database";
 import { USER_MODULES } from "../src/domain/constants/user-modules";
 
 const appEnv = (process.env.APP_ENV ?? "dev").trim().toLowerCase();
@@ -27,7 +27,7 @@ const main = async () => {
   });
 
   const correo = process.env.SEED_ADMIN_EMAIL?.trim().toLowerCase() || "admin@accessnow.local";
-  const existing = await db.usuario.findUnique({ where: { correo } });
+  const existing = await db.user.findUnique({ where: { correo } });
   if (existing) {
     console.log(`[SEED] ${correo} already exists; left unchanged.`);
     return;
@@ -35,7 +35,7 @@ const main = async () => {
 
   const fromEnv = process.env.SEED_ADMIN_PASSWORD?.trim();
   const plainPassword = fromEnv || `${randomBytes(9).toString("base64url")}Aa1`;
-  await db.usuario.create({
+  await db.user.create({
     data: {
       nombre: "Super",
       apellido: "Admin",
