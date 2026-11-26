@@ -3,7 +3,7 @@ import { auditFieldsFromObject, type AuditFields } from "../shared/audit.entity"
 
 export const DEVICE_TYPES = ["GATEWAY", "TERMINAL"] as const;
 export const DEVICE_DIRECTIONS = ["ENTRADA", "SALIDA", "BIDIRECCIONAL"] as const;
-export const DEVICE_CONFIG_STATUSES = ["PENDIENTE", "CONFIGURADA", "ERROR"] as const;
+export const DEVICE_CONFIG_STATUSES = ["PENDIENTE", "CONFIGURADA", "ERROR", "RETIRADA"] as const;
 
 export type DeviceType = (typeof DEVICE_TYPES)[number];
 export type DeviceDirection = (typeof DEVICE_DIRECTIONS)[number];
@@ -26,7 +26,7 @@ export type DeviceEntityOptions = AuditFields & {
   urlRemota: string;
   version: string;
   ultimaConexion: number | null;
-  /** Last presence reported by heartbeats (false until the gateway connects; terminals stay false). */
+  /** Last presence reported by heartbeats: the gateway's own, or the one its gateway reports for a terminal. */
   enLinea: boolean;
   /** The gateway has an operational token (it enrolled at least once). */
   enrolado: boolean;

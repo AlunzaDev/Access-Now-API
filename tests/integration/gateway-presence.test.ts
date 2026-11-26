@@ -118,10 +118,12 @@ describe("gateway: token operativo, heartbeat, estado e historial", () => {
 
     const beat = await call("POST", "/v1/device/heartbeat", {
       token: tokens.gateway,
-      body: { version: "1.4.0", ip: "10.0.0.20" },
+      body: { version: "1.4.0", ip: "10.0.0.20", terminales: [{ mac: "AA:BB:CC:DD:EE:01", ip: "10.0.0.10" }] },
     });
     expect(beat.status).toBe(200);
-    expect(beat.body).toMatchObject({ ok: true, comandos: [] });
+    expect(beat.body).toMatchObject({ ok: true, intervaloSegundos: 60, resultadosRecibidos: [] });
+    // Enrolling queued a SINCRONIZAR with the terminal the gateway must have.
+    expect(beat.body.comandos.map((command: Json) => command.tipo)).toEqual(["SINCRONIZAR"]);
 
     const status = await call("GET", `${devicePath(ids.gateway)}/estado`, { token: tokens.user });
     expect(status.body.enLinea).toBe(true);
@@ -130,6 +132,7 @@ describe("gateway: token operativo, heartbeat, estado e historial", () => {
     const device = await call("GET", devicePath(ids.gateway), { token: tokens.user });
     expect(device.body).toMatchObject({ ip: "10.0.0.20", version: "1.4.0", enLinea: true, enrolado: true });
 
+    // A terminal is online only when its gateway is online and reports it.
     const terminal = await call("GET", `${devicePath(ids.terminal)}/estado`, { token: tokens.user });
     expect(terminal.body).toMatchObject({ tipo: "TERMINAL", enLinea: true, gateway: { id: ids.gateway } });
   });
@@ -138,6 +141,8 @@ describe("gateway: token operativo, heartbeat, estado e historial", () => {
     const marked = await buildGatewayService().markStaleOffline(Date.now() + 10 * 60 * 1000);
     expect(marked).toBeGreaterThanOrEqual(1);
     expect((await db().device.findUniqueOrThrow({ where: { id: ids.gateway } })).enLinea).toBe(false);
+    // Nobody vouches for its terminals while it is gone.
+    expect((await db().device.findUniqueOrThrow({ where: { id: ids.terminal } })).enLinea).toBe(false);
 
     await call("POST", "/v1/device/heartbeat", { token: tokens.gateway, body: {} });
     expect((await db().device.findUniqueOrThrow({ where: { id: ids.gateway } })).enLinea).toBe(true);

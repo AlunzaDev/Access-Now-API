@@ -112,13 +112,38 @@ El frontend valida lo mismo antes de enviar; el backend es la fuente de verdad.
 | `DELETE /proyectos/:proyectoId/imagen` | Módulo `projects` y acceso al proyecto | Proyecto actualizado con `img: ""` |
 | `DELETE /proyectos/:proyectoId` | `SUPER_ROLE` | Proyecto eliminado (y sus asignaciones a usuarios) |
 | `GET /proyectos/:proyectoId/dispositivos` | Módulo `scanners` y acceso al proyecto | `{ items, total }`; filtros `tipo`, `gatewayId`, `buscar`, `desde`, `limite` |
-| `POST /proyectos/:proyectoId/dispositivos` | Módulo `scanners` y acceso al proyecto | Dispositivo creado (`201`) |
-| `GET/PATCH/DELETE /proyectos/:proyectoId/dispositivos/:id` | Módulo `scanners` y acceso al proyecto | Dispositivo; otro proyecto responde `404` |
+| `POST /proyectos/:proyectoId/dispositivos` | Módulo `scanners` y acceso al proyecto | Dispositivo creado (`201`). Una terminal activa encola `CONFIGURAR_TERMINAL` y queda `configEstado: PENDIENTE` |
+| `GET/PATCH/DELETE /proyectos/:proyectoId/dispositivos/:id` | Módulo `scanners` y acceso al proyecto | Dispositivo; otro proyecto responde `404`. En terminales: cambio de IP, carril o sentido, o reactivación → `CONFIGURAR_TERMINAL`; desactivar o borrar → `ELIMINAR_TERMINAL`; cambio de gateway o de MAC → ambos. Renombrar no encola nada |
 | `POST /proyectos/:proyectoId/dispositivos/:id/token-enrolamiento` | Módulo `scanners` y acceso al proyecto | Solo gateway; recibe vigencia de 1/24/168 horas y enrolamiento de 30/90 días o sin vencimiento; token visible una vez |
-| `GET /proyectos/:proyectoId/dispositivos/:id/estado` | Módulo `scanners` y acceso al proyecto | `{ tipo, enLinea, ultimaConexion, umbralFueraDeLineaMs, enrolamiento, configEstado, configError, gateway }`. En línea solo con un heartbeat dentro del umbral (`DEVICE_OFFLINE_AFTER_MS`, 90 s por defecto); una terminal muestra la presencia de su gateway |
-| `GET /proyectos/:proyectoId/dispositivos/:id/historial` | Módulo `scanners` y acceso al proyecto | `{ items, total }` (`desde`, `limite`), más reciente primero. Eventos inmutables: `TOKEN_GENERADO`, `ENROLADO`, `REENROLADO`, `CONECTADO`, `DESCONECTADO`, `ENROLAMIENTO_VENCIDO`, `ERROR`, con `detalle`, `creadoEn` y `actor` |
+| `GET /proyectos/:proyectoId/dispositivos/:id/estado` | Módulo `scanners` y acceso al proyecto | `{ tipo, enLinea, ultimaConexion, umbralFueraDeLineaMs, enrolamiento, configEstado, configError, gateway }`. En línea solo con un heartbeat dentro del umbral (`DEVICE_OFFLINE_AFTER_MS`, 180 s por defecto); una terminal, solo si su gateway está en línea y la reporta |
+| `GET /proyectos/:proyectoId/dispositivos/:id/historial` | Módulo `scanners` y acceso al proyecto | `{ items, total }` (`desde`, `limite`), más reciente primero. Eventos inmutables: `TOKEN_GENERADO`, `ENROLADO`, `REENROLADO`, `CONECTADO`, `DESCONECTADO`, `ENROLAMIENTO_VENCIDO`, `ERROR`, `TERMINAL_DETECTADA`, con `detalle`, `creadoEn` y `actor` |
+| `GET /proyectos/:proyectoId/dispositivos/:id/comandos` | Módulo `scanners` y acceso al proyecto | `{ items, total }` (`desde`, `limite`), más reciente primero: la cola del gateway o los comandos de la terminal. Cada uno: `{ id, gatewayId, terminalId, tipo, estado, payload, resultado, error, intentos, entregadoEn, finalizadoEn, creadoPor, creadoEn, actualizadoPor, actualizadoEn }` |
+| `POST /proyectos/:proyectoId/dispositivos/:id/sincronizar` | Módulo `scanners` y acceso al proyecto | Comando creado (`201`). Gateway: `SINCRONIZAR` con todas sus terminales activas (`409` si no tiene). Terminal: `CONFIGURAR_TERMINAL` otra vez (`409` si está inactiva) |
+| `POST /proyectos/:proyectoId/dispositivos/:id/comandos/:comandoId/cancelar` | Módulo `scanners` y acceso al proyecto | Comando `CANCELADO`; solo si está `PENDIENTE` (`409` si ya se entregó); sus terminales quedan en `ERROR` para reaplicarlas |
 | `GET /v1/me` | Gateway (`Authorization: Bearer <token operativo>`) | `{ device: { id, name, fingerprint }, service: { type, expires_at, settings } }`; `401 Invalid token` o `401 Enrollment expired` |
-| `POST /v1/device/heartbeat` | Gateway (token operativo) | Cuerpo `{ version?, ip?, terminales? }`; guarda la conexión y responde `{ ok: true, serverTime, comandos: [] }`. Los comandos llegan en una fase posterior |
+| `POST /v1/device/heartbeat` | Gateway (token operativo) | Cuerpo `{ version?, ip?, terminales?, resultados? }`, todo opcional. `terminales` (máx. 256, solo cuando cambian): lista completa `{ mac, ip, modelo?, enLinea?, ultimaConexion? }`; MAC conocida actualiza IP y presencia, MAC nueva se registra como terminal `CONFIGURADA` (`TERMINAL_DETECTADA`), las que faltan quedan fuera de línea. `resultados` (máx. 100): `{ id, ok, error?, datos? }` de comandos entregados; en `SINCRONIZAR`, `datos.terminales: [{ mac, ok, error? }]`. Responde `{ ok: true, serverTime, intervaloSegundos, comandos: [{ id, tipo, payload, intentos }], resultadosRecibidos }` (máx. 20 comandos). Ver "Cola de comandos" |
 | `POST /v1/device/enroll` | Público con token de enrolamiento | Contrato SCAT: recibe `{ token, device_fingerprint, device_name }`; consume el token y responde `{ token_type, token, service }` |
 
 Cada endpoint nuevo o modificado se agrega a esta tabla en el mismo commit.
+
+## Cola de comandos (gateways)
+
+La API nunca llama a la Raspberry: las órdenes esperan en `dispositivo_comandos` y viajan en la
+respuesta del heartbeat. El gateway las ejecuta en orden y reporta el resultado en un heartbeat posterior.
+
+- Estados: `PENDIENTE` → `ENTREGADO` → `APLICADO` o `ERROR`; `CANCELADO` si se reemplaza o se cancela.
+- Un comando nuevo reemplaza a los `PENDIENTE` de la misma terminal (por MAC) en el mismo gateway;
+  un `SINCRONIZAR` reemplaza a otro pendiente. Solo viaja el estado más reciente.
+- Un `ENTREGADO` sin resultado se reenvía tras `DEVICE_COMMAND_RETRY_MS` (5 min); después de
+  `DEVICE_COMMAND_MAX_ATTEMPTS` entregas (5) queda en `ERROR`. El gateway debe tratar los comandos
+  como idempotentes: puede recibir uno dos veces.
+- `configEstado` de la terminal: `PENDIENTE` al encolar; `CONFIGURADA`, `RETIRADA` (tras
+  `ELIMINAR_TERMINAL`) o `ERROR` con `configError` al cerrar. No cambia si la terminal ya tiene otro
+  comando abierto, cambió de gateway o de MAC.
+- `resultadosRecibidos` incluye resultados repetidos o tardíos: el gateway puede olvidarlos.
+- Enrolar o re-enrolar un gateway encola `SINCRONIZAR` con sus terminales activas.
+- Lo que reporta el gateway se atribuye a `Gateway <nombre>` en la auditoría.
+
+`payload` de `CONFIGURAR_TERMINAL` y `ELIMINAR_TERMINAL`: `{ terminal: { terminalId, nombre, ip, mac, carril, sentido } }`;
+de `SINCRONIZAR`: `{ terminales: [ ...mismo formato ] }`.
+

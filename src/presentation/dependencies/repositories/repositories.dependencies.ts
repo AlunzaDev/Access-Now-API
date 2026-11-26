@@ -9,6 +9,10 @@ import { ProjectPostgresDatasource } from "../../../infrastructure/datasources/p
 import { ProjectRepositoryImpl } from "../../../infrastructure/repositories/project/project.repository.impl";
 import { DevicePostgresDatasource } from "../../../infrastructure/datasources/device/device.datasource.postgres";
 import { DeviceRepositoryImpl } from "../../../infrastructure/repositories/device/device.repository.impl";
+import { DeviceCommandPostgresDatasource } from
+  "../../../infrastructure/datasources/device-command/device-command.datasource.postgres";
+import { DeviceCommandRepositoryImpl } from
+  "../../../infrastructure/repositories/device-command/device-command.repository.impl";
 
 export const buildUserRepository = () => new UserRepositoryImpl(new UserPostgresDatasource());
 
@@ -18,3 +22,6 @@ export const buildPermissionProfileRepository = () =>
 export const buildProjectRepository = () => new ProjectRepositoryImpl(new ProjectPostgresDatasource());
 
 export const buildDeviceRepository = () => new DeviceRepositoryImpl(new DevicePostgresDatasource());
+
+export const buildDeviceCommandRepository = () =>
+  new DeviceCommandRepositoryImpl(new DeviceCommandPostgresDatasource());

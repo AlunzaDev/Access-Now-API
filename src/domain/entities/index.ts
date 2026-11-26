@@ -1,3 +1,4 @@
+export * from "./device/device-command.entity";
 export * from "./device/device-event.entity";
 export * from "./device/device-status.entity";
 export * from "./device/device.entity";

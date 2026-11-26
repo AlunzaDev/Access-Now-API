@@ -4,10 +4,11 @@ import type {
   GatewayCredentials,
   HeartbeatData,
   NewDevice,
+  TerminalReport,
 } from "../../../domain/datasources/device/device.datasource";
 import type { DeviceValues } from "../../../domain/dtos/device/device-fields";
 import { toPage, type Page, type PageRequest } from "../../../domain/dtos/shared/pagination";
-import { DeviceEntity } from "../../../domain/entities/device/device.entity";
+import { DeviceEntity, type DeviceConfigStatus } from "../../../domain/entities/device/device.entity";
 import type { DeviceEvent, DeviceEventType } from "../../../domain/entities/device/device-event.entity";
 import type { Device, Prisma } from "../../../generated/prisma/client";
 import { PostgresDatabase } from "../../prisma/postgres.database";
@@ -80,6 +81,7 @@ export class DevicePostgresDatasource implements DeviceDatasource {
           sentido: device.sentido,
           urlRemota: device.urlRemota ?? "",
           version: device.version ?? "",
+          ...(device.configEstado ? { configEstado: device.configEstado } : {}),
           creadoPorId: audit.actorId,
           creadoPorNombre: audit.actorNombre,
           actualizadoPorId: audit.actorId,
@@ -244,8 +246,44 @@ export class DevicePostgresDatasource implements DeviceDatasource {
     });
     const ids = stale.map((row) => row.id);
     if (ids.length === 0) return [];
-    await this.devices.updateMany({ where: { id: { in: ids }, enLinea: true }, data: { enLinea: false } });
+    await PostgresDatabase.client.$transaction([
+      this.devices.updateMany({ where: { id: { in: ids }, enLinea: true }, data: { enLinea: false } }),
+      this.devices.updateMany({ where: { gatewayId: { in: ids }, enLinea: true }, data: { enLinea: false } }),
+    ]);
     return ids;
+  }
+
+  async listTerminals(gatewayId: string): Promise<DeviceEntity[]> {
+    const rows = await this.devices.findMany({
+      where: { gatewayId, tipo: "TERMINAL" },
+      orderBy: [{ nombre: "asc" }, { id: "asc" }],
+    });
+    return rows.map(toEntity);
+  }
+
+  async recordTerminalReport(id: string, { gatewayId, ip, modelo, enLinea, ultimaConexion }: TerminalReport): Promise<void> {
+    await this.devices.update({
+      where: { id },
+      data: {
+        gatewayId,
+        ip,
+        enLinea,
+        ...(modelo ? { modelo } : {}),
+        ...(ultimaConexion ? { ultimaConexion } : enLinea ? { ultimaConexion: new Date() } : {}),
+      },
+    });
+  }
+
+  async markTerminalsOffline(gatewayId: string, exceptIds: string[]): Promise<void> {
+    await this.devices.updateMany({
+      where: { gatewayId, tipo: "TERMINAL", enLinea: true, id: { notIn: exceptIds } },
+      data: { enLinea: false },
+    });
+  }
+
+  async setConfigStatus(ids: string[], configEstado: DeviceConfigStatus, configError = ""): Promise<void> {
+    if (ids.length === 0) return;
+    await this.devices.updateMany({ where: { id: { in: ids } }, data: { configEstado, configError } });
   }
 
   async addEvent(deviceId: string, tipo: DeviceEventType, detalle: Record<string, unknown> = {}): Promise<void> {

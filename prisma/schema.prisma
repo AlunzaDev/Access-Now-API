@@ -56,6 +56,7 @@ enum DeviceEventType {
   DESCONECTADO
   ENROLAMIENTO_VENCIDO
   ERROR
+  TERMINAL_DETECTADA
 
   @@map("tipo_evento_dispositivo")
 }
@@ -64,8 +65,27 @@ enum DeviceConfigStatus {
   PENDIENTE
   CONFIGURADA
   ERROR
+  RETIRADA
 
   @@map("estado_configuracion_dispositivo")
+}
+
+enum DeviceCommandType {
+  CONFIGURAR_TERMINAL
+  ELIMINAR_TERMINAL
+  SINCRONIZAR
+
+  @@map("tipo_comando_dispositivo")
+}
+
+enum DeviceCommandStatus {
+  PENDIENTE
+  ENTREGADO
+  APLICADO
+  ERROR
+  CANCELADO
+
+  @@map("estado_comando_dispositivo")
 }
 
 model Role {
@@ -118,17 +138,17 @@ model User {
 }
 
 model PermissionProfile {
-  id          String       @id @default(uuid(7)) @db.Uuid
-  nombre      String       @unique
-  descripcion String       @default("")
-  modules     UserModule[] @default([])
-  estado      Boolean      @default(true)
-  createdAt   DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt   DateTime     @updatedAt @map("updated_at") @db.Timestamptz(3)
-  creadoPorId          String? @map("creado_por_id") @db.Uuid
-  creadoPorNombre      String  @default("Sistema") @map("creado_por_nombre")
-  actualizadoPorId     String? @map("actualizado_por_id") @db.Uuid
-  actualizadoPorNombre String  @default("Sistema") @map("actualizado_por_nombre")
+  id                   String       @id @default(uuid(7)) @db.Uuid
+  nombre               String       @unique
+  descripcion          String       @default("")
+  modules              UserModule[] @default([])
+  estado               Boolean      @default(true)
+  createdAt            DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt            DateTime     @updatedAt @map("updated_at") @db.Timestamptz(3)
+  creadoPorId          String?      @map("creado_por_id") @db.Uuid
+  creadoPorNombre      String       @default("Sistema") @map("creado_por_nombre")
+  actualizadoPorId     String?      @map("actualizado_por_id") @db.Uuid
+  actualizadoPorNombre String       @default("Sistema") @map("actualizado_por_nombre")
 
   users User[]
 
@@ -137,26 +157,26 @@ model PermissionProfile {
 
 /// A venue or client: it owns its events and its SCAT scanners (one Raspberry Pi each).
 model Project {
-  id          String   @id @default(uuid(7)) @db.Uuid
-  nombre      String
+  id                   String   @id @default(uuid(7)) @db.Uuid
+  nombre               String
   /// Short stable code, unique, uppercase with dashes (e.g. ESTADIO-GDL).
-  clave       String   @unique
-  descripcion String   @default("")
-  direccion   String   @default("")
-  ciudad      String   @default("")
-  img         String   @default("")
-  latitud     Float?
-  longitud    Float?
+  clave                String   @unique
+  descripcion          String   @default("")
+  direccion            String   @default("")
+  ciudad               String   @default("")
+  img                  String   @default("")
+  latitud              Float?
+  longitud             Float?
   /// An inactive project is hidden from its admins (SUPER_ROLE still sees it).
-  estado      Boolean  @default(true)
-  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
-  creadoPorId          String? @map("creado_por_id") @db.Uuid
-  creadoPorNombre      String  @default("Sistema") @map("creado_por_nombre")
-  actualizadoPorId     String? @map("actualizado_por_id") @db.Uuid
-  actualizadoPorNombre String  @default("Sistema") @map("actualizado_por_nombre")
+  estado               Boolean  @default(true)
+  createdAt            DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt            DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  creadoPorId          String?  @map("creado_por_id") @db.Uuid
+  creadoPorNombre      String   @default("Sistema") @map("creado_por_nombre")
+  actualizadoPorId     String?  @map("actualizado_por_id") @db.Uuid
+  actualizadoPorNombre String   @default("Sistema") @map("actualizado_por_nombre")
 
-  users UserProject[]
+  users   UserProject[]
   devices Device[]
 
   @@map("proyectos")
@@ -195,10 +215,12 @@ model Device {
   actualizadoPorId         String?            @map("actualizado_por_id") @db.Uuid
   actualizadoPorNombre     String             @default("Sistema") @map("actualizado_por_nombre")
 
-  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  gateway   Device?  @relation("GatewayTerminals", fields: [gatewayId], references: [id], onDelete: Restrict)
-  terminals Device[] @relation("GatewayTerminals")
-  events    DeviceEvent[]
+  project          Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  gateway          Device?         @relation("GatewayTerminals", fields: [gatewayId], references: [id], onDelete: Restrict)
+  terminals        Device[]        @relation("GatewayTerminals")
+  events           DeviceEvent[]
+  gatewayCommands  DeviceCommand[] @relation("GatewayCommands")
+  terminalCommands DeviceCommand[] @relation("TerminalCommands")
 
   @@unique([projectId, mac])
   @@index([projectId, tipo])
@@ -232,4 +254,34 @@ model DeviceEvent {
 
   @@index([deviceId, createdAt])
   @@map("dispositivo_eventos")
+}
+
+/// Order for a gateway, delivered in its heartbeat answer (the API never calls the Raspberry).
+/// `payload` keeps what was requested even if the terminal is later edited or deleted.
+model DeviceCommand {
+  id                   String              @id @default(uuid(7)) @db.Uuid
+  gatewayId            String              @map("gateway_id") @db.Uuid
+  terminalId           String?             @map("terminal_id") @db.Uuid
+  tipo                 DeviceCommandType
+  estado               DeviceCommandStatus @default(PENDIENTE)
+  payload              Json                @default("{}")
+  resultado            Json                @default("{}")
+  error                String              @default("")
+  intentos             Int                 @default(0)
+  entregadoEn          DateTime?           @map("entregado_en") @db.Timestamptz(3)
+  finalizadoEn         DateTime?           @map("finalizado_en") @db.Timestamptz(3)
+  createdAt            DateTime            @default(now()) @map("created_at") @db.Timestamptz(3)
+  creadoPorId          String?             @map("creado_por_id") @db.Uuid
+  creadoPorNombre      String              @default("Sistema") @map("creado_por_nombre")
+  /// Last change: the user who cancelled it, or the gateway that reported its result.
+  updatedAt            DateTime            @updatedAt @map("updated_at") @db.Timestamptz(3)
+  actualizadoPorId     String?             @map("actualizado_por_id") @db.Uuid
+  actualizadoPorNombre String              @default("Sistema") @map("actualizado_por_nombre")
+
+  gateway  Device  @relation("GatewayCommands", fields: [gatewayId], references: [id], onDelete: Cascade)
+  terminal Device? @relation("TerminalCommands", fields: [terminalId], references: [id], onDelete: SetNull)
+
+  @@index([gatewayId, estado, createdAt])
+  @@index([terminalId, createdAt])
+  @@map("dispositivo_comandos")
 }

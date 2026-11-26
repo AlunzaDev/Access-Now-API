@@ -1,13 +1,15 @@
 import type { DeviceValues } from "../../dtos/device/device-fields";
 import type { Page, PageRequest } from "../../dtos/shared/pagination";
 import type { DeviceEvent, DeviceEventType } from "../../entities/device/device-event.entity";
-import type { DeviceEntity, DeviceType } from "../../entities/device/device.entity";
+import type { DeviceConfigStatus, DeviceEntity, DeviceType } from "../../entities/device/device.entity";
 
 export type NewDevice = DeviceValues & {
   projectId: string;
   tipo: DeviceType;
   nombre: string;
   ip: string;
+  /** Only for terminals a gateway reports: they already run on it. */
+  configEstado?: DeviceConfigStatus;
 };
 
 export type DeviceListFilters = {
@@ -27,6 +29,15 @@ export type GatewayCredentials = {
 
 export type HeartbeatData = { at: Date; version?: string; ip?: string };
 
+/** What a gateway reports about one of its terminals (the physical truth of the local network). */
+export type TerminalReport = {
+  gatewayId: string;
+  ip: string;
+  modelo?: string;
+  enLinea: boolean;
+  ultimaConexion?: Date;
+};
+
 export interface DeviceDatasource {
   create(device: NewDevice): Promise<DeviceEntity>;
   list(filters: DeviceListFilters, page: PageRequest): Promise<Page<DeviceEntity>>;
@@ -43,8 +54,19 @@ export interface DeviceDatasource {
   findEnrollmentDates(id: string): Promise<{ enrolledAt: Date | null; expiresAt: Date | null } | null>;
   /** Saves a heartbeat and marks the gateway online; tells whether it already was. */
   recordHeartbeat(id: string, data: HeartbeatData): Promise<{ wasOnline: boolean }>;
-  /** Marks offline the online gateways whose last heartbeat is older than `before`; returns their ids. */
+  /**
+   * Marks offline the online gateways whose last heartbeat is older than `before`, and their
+   * terminals with them (nobody can vouch for them); returns the gateway ids.
+   */
   markOfflineBefore(before: Date): Promise<string[]>;
+  /** Every terminal of a gateway, active or not. */
+  listTerminals(gatewayId: string): Promise<DeviceEntity[]>;
+  /** Saves what the gateway reports about a terminal (presence, current IP, model, its gateway). */
+  recordTerminalReport(id: string, report: TerminalReport): Promise<void>;
+  /** Terminals of the gateway missing from its last full report are no longer reachable. */
+  markTerminalsOffline(gatewayId: string, exceptIds: string[]): Promise<void>;
+  /** Operational state of the configuration (not an edit: it does not change actualizadoPor). */
+  setConfigStatus(ids: string[], configEstado: DeviceConfigStatus, configError?: string): Promise<void>;
   /** Appends to the immutable history. */
   addEvent(deviceId: string, tipo: DeviceEventType, detalle?: Record<string, unknown>): Promise<void>;
   listEvents(deviceId: string, page: PageRequest): Promise<Page<DeviceEvent>>;

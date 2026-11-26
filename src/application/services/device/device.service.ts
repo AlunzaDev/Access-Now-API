@@ -12,6 +12,8 @@ import type { DeviceRepository } from "../../../domain/repository/device/device.
 import type { DeviceEvent } from "../../../domain/entities/device/device-event.entity";
 import type { DeviceStatus } from "../../../domain/entities/device/device-status.entity";
 import { enrollmentStatus, isOnline } from "../../../domain/policies/device/device-presence-policy";
+import type { DeviceCommand } from "../../../domain/entities/device/device-command.entity";
+import type { DeviceCommandService } from "./device-command.service";
 
 const HOUR_MS = 60 * 60 * 1000;
 const TOKEN_VALIDITY_HOURS = [1, 24, 168] as const;
@@ -20,6 +22,7 @@ const ENROLLMENT_DURATION_DAYS = [30, 90] as const;
 export class DeviceService {
   constructor(
     private readonly devices: DeviceRepository,
+    private readonly commands: DeviceCommandService,
     /** A gateway without a heartbeat for this long counts as offline. */
     private readonly offlineAfterMs: number,
   ) {}
@@ -27,7 +30,10 @@ export class DeviceService {
   async create(projectId: string, dto: CreateDeviceDto): Promise<DeviceEntity> {
     await this.validateMac(projectId, dto.values.mac);
     await this.validateGateway(projectId, dto.values.tipo, dto.values.gatewayId);
-    return this.devices.create({ projectId, ...dto.values });
+    const created = await this.devices.create({ projectId, ...dto.values });
+    if (created.tipo !== "TERMINAL") return created;
+    await this.commands.applyTerminalChange(null, created);
+    return this.findDevice(projectId, created.id);
   }
 
   list(
@@ -54,7 +60,9 @@ export class DeviceService {
     await this.validateGateway(projectId, current.tipo, values.gatewayId);
     const updated = await this.devices.update(projectId, id, dto.values);
     if (!updated) throw CustomError.notFound("Dispositivo no encontrado");
-    return updated;
+    if (updated.tipo !== "TERMINAL") return updated;
+    await this.commands.applyTerminalChange(current, updated);
+    return this.findDevice(projectId, id);
   }
 
   async delete(projectId: string, id: string): Promise<DeviceEntity> {
@@ -62,6 +70,9 @@ export class DeviceService {
     if (device.tipo === "GATEWAY") {
       const error = canDeleteGateway(await this.devices.countTerminals(device.id));
       if (error) throw CustomError.conflict(error);
+    } else {
+      // Queued before deleting: the command keeps what to remove even once the terminal is gone.
+      await this.commands.applyTerminalChange(device, null);
     }
     const deleted = await this.devices.delete(projectId, id);
     if (!deleted) throw CustomError.notFound("Dispositivo no encontrado");
@@ -133,6 +144,8 @@ export class DeviceService {
       nombreDispositivo: deviceName,
       expiraEn: expiresAt?.getTime() ?? null,
     });
+    // A new or reinstalled Raspberry starts empty: send it every terminal it must have.
+    await this.commands.syncGateway(device);
     return {
       token_type: "bearer",
       token: operationalToken,
@@ -145,7 +158,10 @@ export class DeviceService {
     };
   }
 
-  /** Real status: online only with a recent heartbeat; terminals show their gateway's presence. */
+  /**
+   * Real status: a gateway is online only with a recent heartbeat; a terminal, only when that
+   * gateway is online and reports the terminal reachable.
+   */
   async status(projectId: string, id: string): Promise<DeviceStatus> {
     const device = await this.findDevice(projectId, id);
     const now = Date.now();
@@ -172,8 +188,8 @@ export class DeviceService {
     const gateway = device.gatewayId ? await this.devices.findById(projectId, device.gatewayId) : null;
     return {
       tipo: device.tipo,
-      enLinea: gateway ? online(gateway) : false,
-      ultimaConexion: gateway?.ultimaConexion ?? null,
+      enLinea: gateway ? online(gateway) && device.enLinea : false,
+      ultimaConexion: device.ultimaConexion,
       umbralFueraDeLineaMs: this.offlineAfterMs,
       enrolamiento: null,
       configEstado: device.configEstado,
@@ -185,6 +201,23 @@ export class DeviceService {
   async history(projectId: string, id: string, page: PageRequest): Promise<Page<DeviceEvent>> {
     await this.findDevice(projectId, id);
     return this.devices.listEvents(id, page);
+  }
+
+  /** Gateway: SINCRONIZAR with all its active terminals. Terminal: configure it again. */
+  async sync(projectId: string, id: string): Promise<DeviceCommand> {
+    const device = await this.findDevice(projectId, id);
+    if (device.tipo === "TERMINAL") return this.commands.reapplyTerminal(device);
+    const command = await this.commands.syncGateway(device);
+    if (!command) throw CustomError.conflict("El gateway no tiene terminales activas que sincronizar");
+    return command;
+  }
+
+  async listCommands(projectId: string, id: string, page: PageRequest): Promise<Page<DeviceCommand>> {
+    return this.commands.list(await this.findDevice(projectId, id), page);
+  }
+
+  async cancelCommand(projectId: string, id: string, commandId: string): Promise<DeviceCommand> {
+    return this.commands.cancel(await this.findDevice(projectId, id), commandId);
   }
 
   private async findDevice(projectId: string, id: string): Promise<DeviceEntity> {

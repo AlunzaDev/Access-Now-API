@@ -25,6 +25,12 @@ export class DeviceRepositoryImpl implements DeviceRepository {
     this.datasource.findEnrollmentDates(...args);
   recordHeartbeat: DeviceRepository["recordHeartbeat"] = (...args) => this.datasource.recordHeartbeat(...args);
   markOfflineBefore: DeviceRepository["markOfflineBefore"] = (...args) => this.datasource.markOfflineBefore(...args);
+  listTerminals: DeviceRepository["listTerminals"] = (...args) => this.datasource.listTerminals(...args);
+  recordTerminalReport: DeviceRepository["recordTerminalReport"] = (...args) =>
+    this.datasource.recordTerminalReport(...args);
+  markTerminalsOffline: DeviceRepository["markTerminalsOffline"] = (...args) =>
+    this.datasource.markTerminalsOffline(...args);
+  setConfigStatus: DeviceRepository["setConfigStatus"] = (...args) => this.datasource.setConfigStatus(...args);
   addEvent: DeviceRepository["addEvent"] = (...args) => this.datasource.addEvent(...args);
   listEvents: DeviceRepository["listEvents"] = (...args) => this.datasource.listEvents(...args);
 }

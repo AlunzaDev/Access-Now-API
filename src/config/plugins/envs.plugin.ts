@@ -110,8 +110,14 @@ export const envs = {
   SPACES_REGION: env.get("SPACES_REGION").default("").asString().trim(),
   SPACES_ENDPOINT: env.get("SPACES_ENDPOINT").default("").asString().trim(),
   SPACES_CDN_URL: env.get("SPACES_CDN_URL").default("").asString().trim(),
-  /** A gateway without a heartbeat for this long is shown offline (and a DESCONECTADO event is recorded). */
-  DEVICE_OFFLINE_AFTER_MS: parseBoundedInteger(env.get("DEVICE_OFFLINE_AFTER_MS").asString(), 90_000, 10_000, 3_600_000),
+  /** How often a gateway should send its heartbeat (sent to it in every answer). */
+  DEVICE_HEARTBEAT_INTERVAL_MS: parseBoundedInteger(env.get("DEVICE_HEARTBEAT_INTERVAL_MS").asString(), 60_000, 10_000, 3_600_000),
+  /** A gateway without a heartbeat for this long is shown offline (and a DESCONECTADO event is recorded): 3 missed. */
+  DEVICE_OFFLINE_AFTER_MS: parseBoundedInteger(env.get("DEVICE_OFFLINE_AFTER_MS").asString(), 180_000, 10_000, 3_600_000),
   /** How often the presence monitor looks for gateways that stopped reporting. */
   DEVICE_PRESENCE_CHECK_MS: parseBoundedInteger(env.get("DEVICE_PRESENCE_CHECK_MS").asString(), 30_000, 5_000, 600_000),
+  /** A delivered command without a result is delivered again after this long. */
+  DEVICE_COMMAND_RETRY_MS: parseBoundedInteger(env.get("DEVICE_COMMAND_RETRY_MS").asString(), 300_000, 30_000, 3_600_000),
+  /** Deliveries without a result before a command is marked ERROR. */
+  DEVICE_COMMAND_MAX_ATTEMPTS: parseBoundedInteger(env.get("DEVICE_COMMAND_MAX_ATTEMPTS").asString(), 5, 1, 50),
 };

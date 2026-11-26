@@ -1,4 +1,5 @@
 import type { NextFunction, Request, Response } from "express";
+import { setAuditActor } from "../../../config/audit-context";
 import type { GatewayService } from "../../../application/services/device/gateway.service";
 import type { GatewayCredentials } from "../../../domain/datasources/device/device.datasource";
 import { ErrorService } from "../errors/error-handler";
@@ -19,7 +20,11 @@ export const createGatewayAuthMiddleware = (gateways: GatewayService) => ({
       const authorization = req.header("Authorization") ?? "";
       const token = authorization.startsWith("Bearer ") ? authorization.slice("Bearer ".length).trim() : "";
       if (!token) return ErrorService.send(res, 401, "Invalid token");
-      (req as GatewayRequest).gateway = await gateways.authenticate(token);
+      const gateway = await gateways.authenticate(token);
+      (req as GatewayRequest).gateway = gateway;
+      // What the gateway reports (results, detected terminals) is attributed to it, not to "Sistema".
+      const name = gateway.device.nombre;
+      setAuditActor({ id: gateway.device.id, nombre: /^gateway\b/i.test(name) ? name : `Gateway ${name}` });
       return next();
     } catch (error) {
       return ErrorService.handleApiError(error, res);

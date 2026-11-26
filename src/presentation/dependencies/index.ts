@@ -9,6 +9,7 @@ import { UserService } from "../../application/services/user/user.service";
 import { DeviceService } from "../../application/services/device/device.service";
 import { DevicePresenceMonitor } from "../../application/services/device/device-presence.monitor";
 import { GatewayService } from "../../application/services/device/gateway.service";
+import { DeviceCommandService } from "../../application/services/device/device-command.service";
 import { createGatewayAuthMiddleware } from "../../api/middlewares/gateway/gateway-auth.middleware";
 import { envs } from "../../config";
 import { NodemailerEmailSender } from "../../infrastructure/email/nodemailer-email.sender";
@@ -21,6 +22,7 @@ import { UserController } from "../routes/user/user.controller";
 import { DeviceController } from "../routes/device/device.controller";
 import {
   buildPermissionProfileRepository,
+  buildDeviceCommandRepository,
   buildDeviceRepository,
   buildProjectRepository,
   buildUserRepository,
@@ -72,13 +74,27 @@ export const buildProjectController = () =>
 
 export const buildHealthController = () => new HealthController();
 
-export const buildGatewayService = () => new GatewayService(buildDeviceRepository(), envs.DEVICE_OFFLINE_AFTER_MS);
+/** Commands per heartbeat answer: a big change reaches the Raspberry in small batches. */
+const COMMANDS_PER_HEARTBEAT = 20;
+
+const buildDeviceCommandService = () =>
+  new DeviceCommandService(buildDeviceCommandRepository(), buildDeviceRepository(), {
+    retryAfterMs: envs.DEVICE_COMMAND_RETRY_MS,
+    maxAttempts: envs.DEVICE_COMMAND_MAX_ATTEMPTS,
+    batchSize: COMMANDS_PER_HEARTBEAT,
+  });
+
+export const buildGatewayService = () =>
+  new GatewayService(buildDeviceRepository(), buildDeviceCommandService(), {
+    offlineAfterMs: envs.DEVICE_OFFLINE_AFTER_MS,
+    heartbeatIntervalMs: envs.DEVICE_HEARTBEAT_INTERVAL_MS,
+  });
 
 export const buildGatewayAuthMiddleware = () => createGatewayAuthMiddleware(buildGatewayService());
 
 export const buildDeviceController = () =>
   new DeviceController(
-    new DeviceService(buildDeviceRepository(), envs.DEVICE_OFFLINE_AFTER_MS),
+    new DeviceService(buildDeviceRepository(), buildDeviceCommandService(), envs.DEVICE_OFFLINE_AFTER_MS),
     buildGatewayService(),
   );
 

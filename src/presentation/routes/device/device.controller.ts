@@ -136,6 +136,42 @@ export class DeviceController {
     }
   };
 
+  /** Gateway: SINCRONIZAR all its active terminals. Terminal: send its configuration again. */
+  sync = async (request: Request, response: Response) => {
+    try {
+      return response
+        .status(201)
+        .json(await this.service.sync(routeParam(request, "proyectoId"), routeParam(request, "id")));
+    } catch (error) {
+      return ErrorService.handleApiError(error, response);
+    }
+  };
+
+  commands = async (request: Request, response: Response) => {
+    try {
+      const page = parsePagination(queryOf(request), 20);
+      return response.json(
+        await this.service.listCommands(routeParam(request, "proyectoId"), routeParam(request, "id"), page),
+      );
+    } catch (error) {
+      return ErrorService.handleApiError(error, response);
+    }
+  };
+
+  cancelCommand = async (request: Request, response: Response) => {
+    try {
+      return response.json(
+        await this.service.cancelCommand(
+          routeParam(request, "proyectoId"),
+          routeParam(request, "id"),
+          routeParam(request, "comandoId"),
+        ),
+      );
+    } catch (error) {
+      return ErrorService.handleApiError(error, response);
+    }
+  };
+
   /** GET /api/v1/me (gateway token): SCAT checks that its enrollment is still valid. */
   me = (request: Request, response: Response) => response.json(this.gateways.me(requestGateway(request)));
 
