@@ -104,4 +104,10 @@ export const envs = {
   WEB_SERVICE_URL: webServiceUrl,
   WEB_CLIENT_URL: webClientUrl,
   CORS_ALLOWED_ORIGINS: [...new Set(corsAllowedOrigins)],
+  SPACES_KEY: env.get("SPACES_KEY").default("").asString().trim(),
+  SPACES_SECRET: env.get("SPACES_SECRET").default("").asString().trim(),
+  SPACES_BUCKET: env.get("SPACES_BUCKET").default("").asString().trim(),
+  SPACES_REGION: env.get("SPACES_REGION").default("").asString().trim(),
+  SPACES_ENDPOINT: env.get("SPACES_ENDPOINT").default("").asString().trim(),
+  SPACES_CDN_URL: env.get("SPACES_CDN_URL").default("").asString().trim(),
 };

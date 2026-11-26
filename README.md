@@ -19,6 +19,10 @@ Sin `SEED_ADMIN_PASSWORD`, el seed genera una contraseña y la muestra una sola 
 
 Sin `MAILER_*` la API funciona, pero no envía correos (recuperación de contraseña y, más adelante, boletos).
 
+Las imágenes de proyectos se guardan en `public/uploads` durante desarrollo. Para usar DigitalOcean Spaces
+configura `SPACES_KEY`, `SPACES_SECRET`, `SPACES_BUCKET`, `SPACES_REGION` y `SPACES_ENDPOINT`; opcionalmente,
+`SPACES_CDN_URL` define la URL pública. Si falta algún valor requerido, se usa almacenamiento local.
+
 ## Calidad
 
 ```bash

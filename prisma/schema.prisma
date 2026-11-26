@@ -101,6 +101,8 @@ model Project {
   direccion   String   @default("")
   ciudad      String   @default("")
   img         String   @default("")
+  latitud     Float?
+  longitud    Float?
   /// An inactive project is hidden from its admins (SUPER_ROLE still sees it).
   estado      Boolean  @default(true)
   createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)

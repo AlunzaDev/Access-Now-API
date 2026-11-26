@@ -9,6 +9,8 @@ export class CreateProjectDto {
     public readonly direccion: string,
     public readonly ciudad: string,
     public readonly estado: boolean,
+    public readonly latitud: number | null,
+    public readonly longitud: number | null,
   ) {}
 
   static create(body: Record<string, unknown>): [string?, CreateProjectDto?] {
@@ -26,6 +28,8 @@ export class CreateProjectDto {
         values!.direccion ?? "",
         values!.ciudad ?? "",
         values!.estado ?? true,
+        values!.latitud ?? null,
+        values!.longitud ?? null,
       ),
     ];
   }

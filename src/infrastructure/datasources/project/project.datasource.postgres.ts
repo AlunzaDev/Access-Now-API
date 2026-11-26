@@ -19,6 +19,8 @@ const toEntity = (row: Project) =>
     direccion: row.direccion,
     ciudad: row.ciudad,
     img: row.img,
+    latitud: row.latitud,
+    longitud: row.longitud,
     estado: row.estado,
   });
 
@@ -50,6 +52,8 @@ export class ProjectPostgresDatasource implements ProjectDatasource {
           direccion: project.direccion,
           ciudad: project.ciudad,
           img: project.img,
+          latitud: project.latitud,
+          longitud: project.longitud,
           estado: project.estado,
         },
       }),

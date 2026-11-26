@@ -8,6 +8,8 @@ export interface ProjectEntityOptions {
   direccion: string;
   ciudad: string;
   img: string;
+  latitud: number | null;
+  longitud: number | null;
   estado: boolean;
 }
 
@@ -20,6 +22,8 @@ export class ProjectEntity {
   public direccion: string;
   public ciudad: string;
   public img: string;
+  public latitud: number | null;
+  public longitud: number | null;
   public estado: boolean;
 
   constructor(options: ProjectEntityOptions) {
@@ -30,6 +34,8 @@ export class ProjectEntity {
     this.direccion = options.direccion;
     this.ciudad = options.ciudad;
     this.img = options.img;
+    this.latitud = options.latitud;
+    this.longitud = options.longitud;
     this.estado = options.estado;
   }
 
@@ -47,6 +53,8 @@ export class ProjectEntity {
       direccion: text(object.direccion),
       ciudad: text(object.ciudad),
       img: text(object.img),
+      latitud: typeof object.latitud === "number" ? object.latitud : null,
+      longitud: typeof object.longitud === "number" ? object.longitud : null,
       estado: object.estado !== false,
     });
   }

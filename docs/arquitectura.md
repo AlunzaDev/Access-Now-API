@@ -23,6 +23,7 @@ src/
     datasources/       consultas con Prisma (convierten filas en entidades)
     repositories/      implementan las interfaces de domain usando los datasources
     email/             SMTP con nodemailer (implementa EmailSender)
+    storage/           disco local o DigitalOcean Spaces (implementa FileStorage)
   api/middlewares/   autenticación, módulos y roles, límites de intentos, manejo de errores
   presentation/
     routes/            rutas y controladores por módulo

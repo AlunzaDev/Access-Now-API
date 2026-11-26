@@ -1,7 +1,7 @@
 {
   "name": "access-now-api",
   "version": "0.1.0",
-  "description": "API de Access Now: eventos, boletos y validaci\u00c3\u00b3n para scanners",
+  "description": "API de Access Now: eventos, boletos y validación para scanners",
   "private": true,
   "main": "dist/app.js",
   "scripts": {
@@ -20,6 +20,7 @@
     "db:studio": "prisma studio"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1178.0",
     "@prisma/adapter-pg": "7.10.1",
     "@prisma/client": "7.10.1",
     "bcryptjs": "^3.0.3",
@@ -28,6 +29,7 @@
     "env-var": "^7.5.0",
     "express": "^5.1.0",
     "jsonwebtoken": "^9.0.2",
+    "multer": "^2.5.0",
     "nodemailer": "^10.6.1",
     "pg": "8.23.1"
   },
@@ -36,6 +38,7 @@
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.3",
     "@types/jsonwebtoken": "^9.0.10",
+    "@types/multer": "^2.3.0",
     "@types/node": "^24.0.10",
     "@types/nodemailer": "^8.0.2",
     "@types/pg": "8.23.1",

@@ -67,6 +67,8 @@ El frontend valida lo mismo antes de enviar; el backend es la fuente de verdad.
 | Perfil | Obligatorio y activo para `ADMIN_ROLE`; se ignora para `SUPER_ROLE` |
 | Módulos de un perfil | Al menos uno de `users`, `permissionProfiles`, `projects`, `events`, `tickets`, `scanners`, `orders` |
 | Clave de proyecto | Única; se guarda en mayúsculas, sin acentos y con guiones (`"Estadio gdl"` → `ESTADIO-GDL`), máximo 40 |
+| Ubicación de proyecto | `latitud` y `longitud` se envían ambas o ninguna; aceptan `null` para quitarla; rangos -90..90 y -180..180 |
+| Imagen de proyecto | Multipart campo `imagen`; JPG, PNG o WebP; máximo 5 MB |
 | `proyectoIds` de un usuario | UUIDs de proyectos existentes. Se ignora para `SUPER_ROLE`. Un admin solo asigna sus propios proyectos (403 si no) y debe dejar al menos uno; los proyectos que no ve se conservan |
 
 ## Endpoints
@@ -89,8 +91,10 @@ El frontend valida lo mismo antes de enviar; el backend es la fuente de verdad.
 | `GET/PATCH /perfiles-permisos/:id` | Módulo `permissionProfiles` | Perfil |
 | `DELETE /perfiles-permisos/:id` | `SUPER_ROLE` | Perfil eliminado; `409` si tiene usuarios |
 | `GET /proyectos` | Módulo `projects` | `{ items, total }` (`desde`, `limite`, `buscar` por nombre, clave o ciudad). Un admin solo ve los suyos |
-| `POST /proyectos` | `SUPER_ROLE` | Proyecto creado (`201`); `409` si la clave existe |
-| `GET/PATCH /proyectos/:proyectoId` | Módulo `projects` y acceso al proyecto | Proyecto; `403` si no es de sus proyectos |
+| `POST /proyectos` | `SUPER_ROLE` | Proyecto creado (`201`); acepta `latitud`/`longitud`; `409` si la clave existe |
+| `GET/PATCH /proyectos/:proyectoId` | Módulo `projects` y acceso al proyecto | Proyecto; PATCH acepta `latitud`/`longitud`; `403` si no es de sus proyectos |
+| `PUT /proyectos/:proyectoId/imagen` | Módulo `projects` y acceso al proyecto | Proyecto actualizado. Multipart campo `imagen` |
+| `DELETE /proyectos/:proyectoId/imagen` | Módulo `projects` y acceso al proyecto | Proyecto actualizado con `img: ""` |
 | `DELETE /proyectos/:proyectoId` | `SUPER_ROLE` | Proyecto eliminado (y sus asignaciones a usuarios) |
 
 Cada endpoint nuevo o modificado se agrega a esta tabla en el mismo commit.

@@ -54,4 +54,24 @@ export class ProjectController {
       return ErrorService.handleApiError(error, res);
     }
   };
+
+  uploadImage = async (req: Request, res: Response) => {
+    try {
+      if (!req.file) return ErrorService.send(res, 400, "El campo 'imagen' es requerido");
+      return res.json(await this.service.uploadImage(sessionActor(req).projectAccess, routeParam(req, "proyectoId"), {
+        buffer: req.file.buffer,
+        contentType: req.file.mimetype,
+      }));
+    } catch (error) {
+      return ErrorService.handleApiError(error, res);
+    }
+  };
+
+  deleteImage = async (req: Request, res: Response) => {
+    try {
+      return res.json(await this.service.deleteImage(sessionActor(req).projectAccess, routeParam(req, "proyectoId")));
+    } catch (error) {
+      return ErrorService.handleApiError(error, res);
+    }
+  };
 }

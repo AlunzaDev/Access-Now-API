@@ -8,6 +8,7 @@ import { PermissionProfileService } from "../../application/services/permission-
 import { UserService } from "../../application/services/user/user.service";
 import { envs } from "../../config";
 import { NodemailerEmailSender } from "../../infrastructure/email/nodemailer-email.sender";
+import { LocalFileStorage, SpacesFileStorage } from "../../infrastructure/storage";
 import { AuthController } from "../routes/auth/auth.controller";
 import { HealthController } from "../routes/health/health.controller";
 import { ProjectController } from "../routes/project/project.controller";
@@ -35,8 +36,32 @@ export const buildUserController = () =>
   );
 
 export const buildPermissionProfileController = () =>
-  new PermissionProfileController(new PermissionProfileService(buildPermissionProfileRepository(), buildUserRepository()));
+  new PermissionProfileController(
+    new PermissionProfileService(buildPermissionProfileRepository(), buildUserRepository()),
+  );
 
-export const buildProjectController = () => new ProjectController(new ProjectService(buildProjectRepository()));
+const buildFileStorage = () => {
+  const configured = [
+    envs.SPACES_KEY,
+    envs.SPACES_SECRET,
+    envs.SPACES_BUCKET,
+    envs.SPACES_REGION,
+    envs.SPACES_ENDPOINT,
+  ].every(Boolean);
+
+  return configured
+    ? new SpacesFileStorage({
+        key: envs.SPACES_KEY,
+        secret: envs.SPACES_SECRET,
+        bucket: envs.SPACES_BUCKET,
+        region: envs.SPACES_REGION,
+        endpoint: envs.SPACES_ENDPOINT,
+        cdnUrl: envs.SPACES_CDN_URL,
+      })
+    : new LocalFileStorage(envs.PUBLIC_PATH, envs.WEB_SERVICE_URL);
+};
+
+export const buildProjectController = () =>
+  new ProjectController(new ProjectService(buildProjectRepository(), buildFileStorage()));
 
 export const buildHealthController = () => new HealthController();

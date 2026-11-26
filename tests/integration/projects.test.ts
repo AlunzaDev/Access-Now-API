@@ -1,5 +1,7 @@
 import express from "express";
 import { randomUUID } from "node:crypto";
+import { existsSync } from "node:fs";
+import { resolve } from "node:path";
 import type { Server } from "node:http";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { ErrorService } from "../../src/api/middlewares/errors/error-handler";
@@ -29,6 +31,17 @@ const call = async (method: string, path: string, { body, token }: { body?: unkn
   });
   const text = await response.text();
   return { status: response.status, body: (text.startsWith("{") ? JSON.parse(text) : text) as Json };
+};
+
+const uploadImage = async (projectId: string, token: string, file: Blob, filename: string) => {
+  const form = new FormData();
+  form.set("imagen", file, filename);
+  const response = await fetch(`${base}/api/proyectos/${projectId}/imagen`, {
+    method: "PUT",
+    headers: { Authorization: `Bearer ${token}` },
+    body: form,
+  });
+  return { status: response.status, body: (await response.json()) as Json };
 };
 
 const login = async (name: string) => {
@@ -69,10 +82,10 @@ describe("proyectos y acceso por proyecto", () => {
   it("lets a super admin create projects with a normalized, unique clave", async () => {
     const norte = await call("POST", "/proyectos", {
       token: tokens.super,
-      body: { nombre: "Estadio Norte", clave: `${tag} norte`, ciudad: "Monterrey" },
+      body: { nombre: "Estadio Norte", clave: `${tag} norte`, ciudad: "Monterrey", latitud: 25.6866, longitud: -100.3161 },
     });
     expect(norte.status).toBe(201);
-    expect(norte.body).toMatchObject({ clave: `${TAG}-NORTE`, ciudad: "Monterrey", estado: true });
+    expect(norte.body).toMatchObject({ clave: `${TAG}-NORTE`, ciudad: "Monterrey", estado: true, latitud: 25.6866, longitud: -100.3161 });
     ids.norte = norte.body.id;
 
     ids.sur = (await call("POST", "/proyectos", { token: tokens.super, body: { nombre: "Arena Sur", clave: `${tag}-sur` } })).body.id;
@@ -81,6 +94,52 @@ describe("proyectos y acceso por proyecto", () => {
     const duplicate = await call("POST", "/proyectos", { token: tokens.super, body: { nombre: "X", clave: `${TAG}-NORTE` } });
     expect(duplicate.status).toBe(409);
     expect((await call("POST", "/proyectos", { token: tokens.super, body: { nombre: "Sin clave" } })).status).toBe(400);
+  });
+
+  it("validates and updates project location as a complete pair", async () => {
+    const updated = await call("PATCH", `/proyectos/${ids.norte}`, {
+      token: tokens.super,
+      body: { latitud: 19.4326, longitud: -99.1332 },
+    });
+    expect(updated.status).toBe(200);
+    expect(updated.body).toMatchObject({ latitud: 19.4326, longitud: -99.1332 });
+
+    const incomplete = await call("PATCH", `/proyectos/${ids.norte}`, { token: tokens.super, body: { latitud: 20 } });
+    expect(incomplete.status).toBe(400);
+    expect(incomplete.body).toMatchObject({ ok: false, statusCode: 400, details: null });
+
+    const cleared = await call("PATCH", `/proyectos/${ids.norte}`, { token: tokens.super, body: { latitud: null, longitud: null } });
+    expect(cleared.body).toMatchObject({ latitud: null, longitud: null });
+  });
+
+  it("uploads, replaces and deletes a local project image", async () => {
+    const first = await uploadImage(ids.norte, tokens.super, new Blob(["first"], { type: "image/png" }), "first.png");
+    expect(first.status).toBe(200);
+    expect(first.body.img).toMatch(new RegExp(`/uploads/proyectos/${ids.norte}/[0-9a-f-]+\\.png$`));
+    const firstUrl = first.body.img as string;
+    const firstPath = resolve(process.cwd(), "public", new URL(firstUrl, "http://local").pathname.replace(/^\/uploads\//, "uploads/"));
+    expect(existsSync(firstPath)).toBe(true);
+
+    const second = await uploadImage(ids.norte, tokens.super, new Blob(["second"], { type: "image/webp" }), "second.webp");
+    expect(second.status).toBe(200);
+    expect(second.body.img).toMatch(/\.webp$/);
+    expect(second.body.img).not.toBe(firstUrl);
+    const secondPath = resolve(process.cwd(), "public", new URL(second.body.img as string, "http://local").pathname.replace(/^\/uploads\//, "uploads/"));
+    expect(existsSync(firstPath)).toBe(false);
+    expect(existsSync(secondPath)).toBe(true);
+
+    const invalid = await uploadImage(ids.norte, tokens.super, new Blob(["text"], { type: "text/plain" }), "bad.txt");
+    expect(invalid.status).toBe(400);
+    expect(invalid.body).toMatchObject({ ok: false, statusCode: 400, details: null });
+
+    const oversized = await uploadImage(ids.norte, tokens.super, new Blob([new Uint8Array(5 * 1024 * 1024 + 1)], { type: "image/jpeg" }), "large.jpg");
+    expect(oversized.status).toBe(413);
+    expect(oversized.body).toMatchObject({ ok: false, statusCode: 413, details: null });
+
+    const removed = await call("DELETE", `/proyectos/${ids.norte}/imagen`, { token: tokens.super });
+    expect(removed.status).toBe(200);
+    expect(removed.body.img).toBe("");
+    expect(existsSync(secondPath)).toBe(false);
   });
 
   it("returns every project in a super admin's session", async () => {

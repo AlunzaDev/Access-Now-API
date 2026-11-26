@@ -3,9 +3,11 @@ import type { ProjectEntity } from "../../../domain/entities/project/project.ent
 import { CustomError } from "../../../domain/errors/custom.error";
 import { canAccessProject, type ProjectAccess } from "../../../domain/policies/project/project-access-policy";
 import type { ProjectRepository } from "../../../domain/repository/project/project.repository";
+import type { FileStorage, FileUpload } from "../../../domain/ports/storage/file-storage.port";
+import { randomUUID } from "node:crypto";
 
 export class ProjectService {
-  constructor(private readonly projects: ProjectRepository) {}
+  constructor(private readonly projects: ProjectRepository, private readonly storage: FileStorage) {}
 
   async create(dto: CreateProjectDto): Promise<ProjectEntity> {
     await this.ensureClaveIsFree(dto.clave);
@@ -16,6 +18,8 @@ export class ProjectService {
       direccion: dto.direccion,
       ciudad: dto.ciudad,
       img: "",
+      latitud: dto.latitud,
+      longitud: dto.longitud,
       estado: dto.estado,
     });
   }
@@ -41,6 +45,34 @@ export class ProjectService {
     const deleted = await this.projects.delete(id);
     if (!deleted) throw CustomError.notFound("Proyecto no encontrado");
     return deleted;
+  }
+
+  async uploadImage(access: ProjectAccess, id: string, file: FileUpload): Promise<ProjectEntity> {
+    const project = await this.findAccessible(access, id);
+    const extension = file.contentType === "image/png" ? "png" : file.contentType === "image/webp" ? "webp" : "jpg";
+    const saved = await this.storage.save({
+      buffer: file.buffer,
+      folder: `proyectos/${id}`,
+      fileName: `${randomUUID()}.${extension}`,
+      contentType: file.contentType,
+    });
+    try {
+      const updated = await this.projects.update(id, { img: saved.url });
+      if (!updated) throw CustomError.notFound("Proyecto no encontrado");
+      await this.storage.deleteByUrl(project.img);
+      return updated;
+    } catch (error) {
+      await this.storage.deleteByUrl(saved.url);
+      throw error;
+    }
+  }
+
+  async deleteImage(access: ProjectAccess, id: string): Promise<ProjectEntity> {
+    const project = await this.findAccessible(access, id);
+    const updated = await this.projects.update(id, { img: "" });
+    if (!updated) throw CustomError.notFound("Proyecto no encontrado");
+    await this.storage.deleteByUrl(project.img);
+    return updated;
   }
 
   /** A project the actor cannot see answers 404, the same as one that does not exist. */

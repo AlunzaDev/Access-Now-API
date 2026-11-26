@@ -1,5 +1,5 @@
 import { Router } from "express";
-import type { AuthMiddleware } from "../../../api/middlewares/auth/auth.middleware";
+import { uploadProjectImage, type AuthMiddleware } from "../../../api/middlewares";
 import { AUTH_ROLES } from "../../../domain/constants";
 import { buildProjectController } from "../../dependencies";
 
@@ -20,6 +20,8 @@ export class ProjectRoutes {
     router.post("/", superOnly, controller.create);
     router.get("/:proyectoId", auth.requireProjectAccess(), controller.getById);
     router.patch("/:proyectoId", auth.requireProjectAccess(), controller.update);
+    router.put("/:proyectoId/imagen", auth.requireProjectAccess(), uploadProjectImage, controller.uploadImage);
+    router.delete("/:proyectoId/imagen", auth.requireProjectAccess(), controller.deleteImage);
     router.delete("/:proyectoId", superOnly, controller.delete);
 
     return router;

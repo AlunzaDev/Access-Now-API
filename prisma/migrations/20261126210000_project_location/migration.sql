@@ -1,0 +1,4 @@
+-- AlterTable
+ALTER TABLE "proyectos"
+ADD COLUMN "latitud" DOUBLE PRECISION,
+ADD COLUMN "longitud" DOUBLE PRECISION;
