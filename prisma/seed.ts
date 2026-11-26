@@ -23,7 +23,8 @@ const main = async () => {
   await db.permissionProfile.upsert({
     where: { nombre: "Administrador total" },
     create: { nombre: "Administrador total", descripcion: "Todos los módulos (seed)", modules: [...USER_MODULES] },
-    update: {},
+    // "Total" means every module, also the ones added after the profile was created.
+    update: { modules: [...USER_MODULES] },
   });
 
   await db.project.upsert({
