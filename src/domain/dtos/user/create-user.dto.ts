@@ -2,7 +2,7 @@ import { AUTH_ROLES, isUserRole, type UserRole } from "../../constants";
 import { isValidEmail } from "../../policies/shared/email-format";
 import { isValidPassword, PASSWORD_POLICY_MESSAGE } from "../../policies/user/password-policy";
 import { roleNeedsProfile } from "../../policies/user/user-management-policy";
-import { readProfileId, text, unknownFields, USER_FIELDS } from "./user-fields";
+import { readProfileId, readProjectIds, text, unknownFields, USER_FIELDS } from "./user-fields";
 
 export class CreateUserDto {
   private constructor(
@@ -13,6 +13,7 @@ export class CreateUserDto {
     public readonly password: string,
     public readonly rol: UserRole,
     public readonly permissionProfileId: string | undefined,
+    public readonly proyectoIds: string[],
     public readonly estado: boolean,
   ) {}
 
@@ -37,6 +38,8 @@ export class CreateUserDto {
       return ["Un administrador necesita un perfil de permisos ('permissionProfileId')"];
     }
     if (body.estado !== undefined && typeof body.estado !== "boolean") return ["'estado' debe ser boolean"];
+    const [projectsError, proyectoIds] = readProjectIds(body.proyectoIds);
+    if (projectsError) return [projectsError];
 
     return [
       undefined,
@@ -48,6 +51,7 @@ export class CreateUserDto {
         body.password as string,
         rol,
         permissionProfileId ?? undefined,
+        proyectoIds ?? [],
         body.estado !== false,
       ),
     ];

@@ -3,6 +3,7 @@ import { ErrorService } from "../../api/middlewares/errors/error-handler";
 import { buildAuthMiddleware } from "../dependencies";
 import { AuthRoutes } from "./auth/auth.routes";
 import { HealthRoutes } from "./health/health.routes";
+import { ProjectRoutes } from "./project/project.routes";
 import { PermissionProfileRoutes } from "./permission-profile/permission-profile.routes";
 import { UserRoutes } from "./user/user.routes";
 
@@ -19,6 +20,7 @@ export class AppRoutes {
     router.use("/api/auth", AuthRoutes.routes(auth));
     router.use("/api/usuarios", UserRoutes.routes(auth));
     router.use("/api/perfiles-permisos", PermissionProfileRoutes.routes(auth));
+    router.use("/api/proyectos", ProjectRoutes.routes(auth));
 
     router.use("/api", ErrorService.notFound);
     return router;

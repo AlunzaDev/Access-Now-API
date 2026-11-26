@@ -1,7 +1,7 @@
 import { isUserRole, type UserRole } from "../../constants";
 import { isValidEmail } from "../../policies/shared/email-format";
 import { isValidPassword, PASSWORD_POLICY_MESSAGE } from "../../policies/user/password-policy";
-import { readProfileId, text, unknownFields, USER_FIELDS } from "./user-fields";
+import { readProfileId, readProjectIds, text, unknownFields, USER_FIELDS } from "./user-fields";
 
 export type UserChangesInput = {
   nombre?: string;
@@ -11,6 +11,7 @@ export type UserChangesInput = {
   password?: string;
   rol?: UserRole;
   permissionProfileId?: string | null;
+  proyectoIds?: string[];
   estado?: boolean;
 };
 
@@ -49,6 +50,9 @@ export class UpdateUserDto {
       if (typeof body.estado !== "boolean") return ["'estado' debe ser boolean"];
       values.estado = body.estado;
     }
+    const [projectsError, proyectoIds] = readProjectIds(body.proyectoIds);
+    if (projectsError) return [projectsError];
+    if (proyectoIds !== undefined) values.proyectoIds = proyectoIds;
 
     if (Object.keys(values).length === 0) return ["No hay campos para actualizar"];
     return [undefined, new UpdateUserDto(values)];

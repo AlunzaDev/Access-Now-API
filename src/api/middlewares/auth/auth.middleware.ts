@@ -1,8 +1,10 @@
 import type { NextFunction, Request, Response } from "express";
 import type { SessionService, SessionUser } from "../../../application/services/auth/session.service";
+import type { Actor } from "../../../application/services/shared/actor";
 import { JwtPlugin } from "../../../config/plugins/jwt.plugin";
 import type { UserModuleAccess, UserRole } from "../../../domain/constants";
 import { canOpenModule } from "../../../domain/policies/auth/session-policy";
+import { canAccessProject, projectAccessOf } from "../../../domain/policies/project/project-access-policy";
 import { ErrorService } from "../errors/error-handler";
 
 type AuthenticatedRequest = Request & { usuario?: SessionUser };
@@ -15,6 +17,17 @@ export const sessionUser = (req: Request): SessionUser => {
   const usuario = getSessionUser(req);
   if (!usuario) throw new Error("sessionUser() used on a route without requireAuth");
   return usuario;
+};
+
+/** The signed-in user as services need it: id, role and the projects it may see. */
+export const sessionActor = (req: Request): Actor => {
+  const usuario = sessionUser(req);
+  return { id: usuario.id, rol: usuario.rol, projectAccess: projectAccessOf(usuario) };
+};
+
+const paramOf = (req: Request, name: string): string => {
+  const value = req.params[name];
+  return String(Array.isArray(value) ? value[0] : (value ?? "")).trim();
 };
 
 const readBearerToken = (req: Request): string | undefined => {
@@ -60,6 +73,18 @@ export const createAuthMiddleware = (sessions: SessionService) => ({
       if (!usuario) return ErrorService.send(res, 401, "Falta el token de sesión");
       if (!modules.some((module) => canOpenModule(usuario, module))) {
         return ErrorService.send(res, 403, "No tienes acceso a esta sección");
+      }
+      return next();
+    },
+
+  /** Routes under /proyectos/:proyectoId: the project must be one the user may see. */
+  requireProjectAccess:
+    (param = "proyectoId") =>
+    (req: Request, res: Response, next: NextFunction) => {
+      const usuario = getSessionUser(req);
+      if (!usuario) return ErrorService.send(res, 401, "Falta el token de sesión");
+      if (!canAccessProject(projectAccessOf(usuario), paramOf(req, param))) {
+        return ErrorService.send(res, 403, "No tienes acceso a este proyecto");
       }
       return next();
     },

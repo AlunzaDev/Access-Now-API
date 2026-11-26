@@ -77,7 +77,7 @@ describe("auth, usuarios y perfiles", () => {
     const { status, body } = await login("super");
     expect(status).toBe(200);
     expect(body.usuario.rol).toBe("SUPER_ROLE");
-    expect(body.usuario.modules).toEqual(["users", "permissionProfiles", "events", "tickets", "scanners", "orders"]);
+    expect(body.usuario.modules).toEqual(["users", "permissionProfiles", "projects", "events", "tickets", "scanners", "orders"]);
     expect(body.usuario.password).toBeUndefined();
     superToken = body.token;
 
@@ -179,7 +179,8 @@ describe("auth, usuarios y perfiles", () => {
     const anaToken = (await login("ana")).body.token;
 
     expectApiError(await call("PATCH", `/usuarios/${ana.id}`, { token: anaToken, body: { rol: "SUPER_ROLE" } }), 403);
-    expectApiError(await call("PATCH", `/usuarios/${superUser.id}`, { token: anaToken, body: { nombre: "Otro" } }), 403);
+    // A super admin has no projects, so an admin does not even see it.
+    expectApiError(await call("PATCH", `/usuarios/${superUser.id}`, { token: anaToken, body: { nombre: "Otro" } }), 404);
     expectApiError(await call("DELETE", `/usuarios/${superUser.id}`, { token: anaToken }), 403);
     expectApiError(await call("PATCH", `/usuarios/${superUser.id}`, { token: superToken, body: { estado: false } }), 400);
 

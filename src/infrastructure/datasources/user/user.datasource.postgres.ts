@@ -7,11 +7,16 @@ import type {
 import { toPage, type Page, type PageRequest } from "../../../domain/dtos/shared/pagination";
 import { UserEntity } from "../../../domain/entities/user/user.entity";
 import { CustomError } from "../../../domain/errors/custom.error";
-import type { Prisma, User } from "../../../generated/prisma/client";
+import type { Prisma } from "../../../generated/prisma/client";
 import { PostgresDatabase } from "../../prisma/postgres.database";
 import { isUuid, withPrismaErrors } from "../../prisma/prisma-errors";
 
-const toEntity = (row: User): UserEntity =>
+/** Relations needed to build a UserEntity (its project ids). */
+const userInclude = { projects: { select: { projectId: true } } } satisfies Prisma.UserInclude;
+
+type UserRow = Prisma.UserGetPayload<{ include: typeof userInclude }>;
+
+const toEntity = (row: UserRow): UserEntity =>
   UserEntity.fromObject({
     id: row.id,
     nombre: row.nombre,
@@ -21,14 +26,16 @@ const toEntity = (row: User): UserEntity =>
     password: row.password,
     rol: row.rol,
     permissionProfileId: row.permissionProfileId ?? undefined,
+    proyectoIds: row.projects.map((link) => link.projectId),
     img: row.img,
     estado: row.estado,
   });
 
-const invalidProfile = CustomError.badRequest("El perfil de permisos asignado no existe");
+const invalidReference = CustomError.badRequest("El perfil de permisos o un proyecto asignado no existe");
 
-const searchWhere = ({ buscar }: UserListFilters): Prisma.UserWhereInput =>
-  buscar
+const listWhere = ({ buscar, proyectoIds }: UserListFilters): Prisma.UserWhereInput => ({
+  ...(proyectoIds ? { projects: { some: { projectId: { in: proyectoIds.filter(isUuid) } } } } : {}),
+  ...(buscar
     ? {
         OR: [
           { nombre: { contains: buscar, mode: "insensitive" } },
@@ -36,7 +43,10 @@ const searchWhere = ({ buscar }: UserListFilters): Prisma.UserWhereInput =>
           { correo: { contains: buscar, mode: "insensitive" } },
         ],
       }
-    : {};
+    : {}),
+});
+
+const projectLinks = (ids: string[]) => ids.filter(isUuid).map((projectId) => ({ projectId }));
 
 export class UserPostgresDatasource implements UserDatasource {
   private get users() {
@@ -57,28 +67,36 @@ export class UserPostgresDatasource implements UserDatasource {
             permissionProfileId: user.permissionProfileId ?? null,
             img: user.img ?? "",
             estado: user.estado,
+            projects: { create: projectLinks(user.proyectoIds) },
           },
+          include: userInclude,
         }),
-      { foreignKey: invalidProfile },
+      { foreignKey: invalidReference },
     );
     return toEntity(row);
   }
 
   async findById(id: string): Promise<UserEntity | null> {
     if (!isUuid(id)) return null;
-    const row = await this.users.findUnique({ where: { id } });
+    const row = await this.users.findUnique({ where: { id }, include: userInclude });
     return row ? toEntity(row) : null;
   }
 
   async findByEmail(correo: string): Promise<UserEntity | null> {
-    const row = await this.users.findUnique({ where: { correo: correo.trim().toLowerCase() } });
+    const row = await this.users.findUnique({ where: { correo: correo.trim().toLowerCase() }, include: userInclude });
     return row ? toEntity(row) : null;
   }
 
   async list(filters: UserListFilters, { desde, limite }: PageRequest): Promise<Page<UserEntity>> {
-    const where = searchWhere(filters);
+    const where = listWhere(filters);
     const [rows, total] = await Promise.all([
-      this.users.findMany({ where, orderBy: [{ createdAt: "asc" }, { id: "asc" }], skip: desde, take: limite }),
+      this.users.findMany({
+        where,
+        include: userInclude,
+        orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+        skip: desde,
+        take: limite,
+      }),
       this.users.count({ where }),
     ]);
     return toPage(rows.map(toEntity), total);
@@ -86,23 +104,33 @@ export class UserPostgresDatasource implements UserDatasource {
 
   async update(id: string, changes: UserChanges): Promise<UserEntity | null> {
     if (!(await this.findById(id))) return null;
+    // Projects are replaced as a whole when sent, in the same transaction as the rest.
     const row = await withPrismaErrors(
       () =>
-        this.users.update({
-          where: { id },
-          data: {
-            nombre: changes.nombre,
-            apellido: changes.apellido,
-            correo: changes.correo?.trim().toLowerCase(),
-            telefono: changes.telefono,
-            password: changes.password,
-            rol: changes.rol,
-            permissionProfileId: changes.permissionProfileId,
-            img: changes.img,
-            estado: changes.estado,
-          },
+        PostgresDatabase.client.$transaction(async (tx) => {
+          if (changes.proyectoIds !== undefined) {
+            await tx.userProject.deleteMany({ where: { userId: id } });
+            await tx.userProject.createMany({
+              data: projectLinks(changes.proyectoIds).map((link) => ({ ...link, userId: id })),
+            });
+          }
+          return tx.user.update({
+            where: { id },
+            include: userInclude,
+            data: {
+              nombre: changes.nombre,
+              apellido: changes.apellido,
+              correo: changes.correo?.trim().toLowerCase(),
+              telefono: changes.telefono,
+              password: changes.password,
+              rol: changes.rol,
+              permissionProfileId: changes.permissionProfileId,
+              img: changes.img,
+              estado: changes.estado,
+            },
+          });
         }),
-      { foreignKey: invalidProfile },
+      { foreignKey: invalidReference },
     );
     return toEntity(row);
   }
@@ -126,6 +154,7 @@ export class UserPostgresDatasource implements UserDatasource {
   async findByPasswordResetToken(tokenHash: string): Promise<UserEntity | null> {
     const row = await this.users.findFirst({
       where: { passwordResetTokenHash: tokenHash, passwordResetExpiresAt: { gt: new Date() } },
+      include: userInclude,
     });
     return row ? toEntity(row) : null;
   }

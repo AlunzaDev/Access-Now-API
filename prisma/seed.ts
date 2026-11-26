@@ -1,6 +1,6 @@
 // Development seed: `npm run db:seed`. Idempotent (upserts by natural keys), refuses to run in prod.
 //
-// Creates a permission profile with every module and the first super administrator.
+// Creates a permission profile with every module, a demo project and the first super administrator.
 // The password comes from SEED_ADMIN_PASSWORD, or is generated and printed once.
 import { config as loadDotenv } from "dotenv";
 import { randomBytes } from "node:crypto";
@@ -23,6 +23,12 @@ const main = async () => {
   await db.permissionProfile.upsert({
     where: { nombre: "Administrador total" },
     create: { nombre: "Administrador total", descripcion: "Todos los módulos (seed)", modules: [...USER_MODULES] },
+    update: {},
+  });
+
+  await db.project.upsert({
+    where: { clave: "DEMO" },
+    create: { nombre: "Proyecto demo", clave: "DEMO", descripcion: "Proyecto de prueba (seed)", ciudad: "Guadalajara" },
     update: {},
   });
 

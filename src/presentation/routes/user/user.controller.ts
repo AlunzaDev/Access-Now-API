@@ -1,5 +1,5 @@
 import type { Request, Response } from "express";
-import { sessionUser } from "../../../api/middlewares/auth/auth.middleware";
+import { sessionActor } from "../../../api/middlewares/auth/auth.middleware";
 import { ErrorService } from "../../../api/middlewares/errors/error-handler";
 import type { UserService } from "../../../application/services/user/user.service";
 import { CreateUserDto, parsePagination, parseSearch, UpdateUserDto } from "../../../domain/dtos";
@@ -12,7 +12,7 @@ export class UserController {
     try {
       const [error, dto] = CreateUserDto.create(bodyOf(req));
       if (error) return ErrorService.send(res, 400, error);
-      return res.status(201).json(await this.userService.create(sessionUser(req), dto!));
+      return res.status(201).json(await this.userService.create(sessionActor(req), dto!));
     } catch (error) {
       return ErrorService.handleApiError(error, res);
     }
@@ -21,7 +21,7 @@ export class UserController {
   list = async (req: Request, res: Response) => {
     try {
       const query = queryOf(req);
-      return res.json(await this.userService.list({ buscar: parseSearch(query.buscar) }, parsePagination(query)));
+      return res.json(await this.userService.list(sessionActor(req), { buscar: parseSearch(query.buscar) }, parsePagination(query)));
     } catch (error) {
       return ErrorService.handleApiError(error, res);
     }
@@ -29,7 +29,7 @@ export class UserController {
 
   getById = async (req: Request, res: Response) => {
     try {
-      return res.json(await this.userService.getById(routeParam(req, "id")));
+      return res.json(await this.userService.getById(sessionActor(req), routeParam(req, "id")));
     } catch (error) {
       return ErrorService.handleApiError(error, res);
     }
@@ -39,7 +39,7 @@ export class UserController {
     try {
       const [error, dto] = UpdateUserDto.create(bodyOf(req));
       if (error) return ErrorService.send(res, 400, error);
-      return res.json(await this.userService.update(sessionUser(req), routeParam(req, "id"), dto!));
+      return res.json(await this.userService.update(sessionActor(req), routeParam(req, "id"), dto!));
     } catch (error) {
       return ErrorService.handleApiError(error, res);
     }
@@ -47,7 +47,7 @@ export class UserController {
 
   delete = async (req: Request, res: Response) => {
     try {
-      return res.json(await this.userService.delete(sessionUser(req), routeParam(req, "id")));
+      return res.json(await this.userService.delete(sessionActor(req), routeParam(req, "id")));
     } catch (error) {
       return ErrorService.handleApiError(error, res);
     }

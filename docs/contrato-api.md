@@ -35,7 +35,7 @@ Reglas del frontend:
 
 - Un registro (crear, leer, actualizar, eliminar): el objeto directo, sin envolver. Crear responde `201`.
 - Un listado: `{ "items": [...], "total": n }` (ver "Paginación").
-- Login y renovar sesión: `{ "token": "…", "usuario": { …, "modules": [...] } }`.
+- Login y renovar sesión: `{ "token": "…", "usuario": { …, "modules": [...], "proyectos": [{ "id", "nombre", "clave", "estado" }] } }`. `SUPER_ROLE` recibe todos los proyectos; `ADMIN_ROLE`, sus proyectos activos.
 - Nunca se responde `password` ni tokens de recuperación.
 
 ## Paginación
@@ -65,7 +65,9 @@ El frontend valida lo mismo antes de enviar; el backend es la fuente de verdad.
 | Ids | UUID; un id con otro formato responde `404` como si no existiera |
 | Rol | `SUPER_ROLE` o `ADMIN_ROLE` (por defecto `ADMIN_ROLE`) |
 | Perfil | Obligatorio y activo para `ADMIN_ROLE`; se ignora para `SUPER_ROLE` |
-| Módulos de un perfil | Al menos uno de `users`, `permissionProfiles`, `events`, `tickets`, `scanners`, `orders` |
+| Módulos de un perfil | Al menos uno de `users`, `permissionProfiles`, `projects`, `events`, `tickets`, `scanners`, `orders` |
+| Clave de proyecto | Única; se guarda en mayúsculas, sin acentos y con guiones (`"Estadio gdl"` → `ESTADIO-GDL`), máximo 40 |
+| `proyectoIds` de un usuario | UUIDs de proyectos existentes. Se ignora para `SUPER_ROLE`. Un admin solo asigna sus propios proyectos (403 si no) y debe dejar al menos uno; los proyectos que no ve se conservan |
 
 ## Endpoints
 
@@ -77,7 +79,7 @@ El frontend valida lo mismo antes de enviar; el backend es la fuente de verdad.
 | `POST /auth/forgot-password` | Público | `{ message }`, igual exista o no la cuenta |
 | `GET /auth/reset-password/:token` | Público | Página HTML para elegir la contraseña nueva |
 | `POST /auth/reset-password` | Público | `{ message }`. Cuerpo `{ token, newPassword, confirmPassword? }` |
-| `GET /usuarios` | Módulo `users` | `{ items, total }` (`desde`, `limite`, `buscar`) |
+| `GET /usuarios` | Módulo `users` | `{ items, total }` (`desde`, `limite`, `buscar`). Un admin solo ve a los usuarios de sus proyectos (y a sí mismo) |
 | `POST /usuarios` | Módulo `users` | Usuario creado (`201`) |
 | `GET/PATCH /usuarios/:id` | Módulo `users` | Usuario |
 | `DELETE /usuarios/:id` | `SUPER_ROLE` | Usuario eliminado |
@@ -86,5 +88,9 @@ El frontend valida lo mismo antes de enviar; el backend es la fuente de verdad.
 | `POST /perfiles-permisos` | Módulo `permissionProfiles` | Perfil creado (`201`) |
 | `GET/PATCH /perfiles-permisos/:id` | Módulo `permissionProfiles` | Perfil |
 | `DELETE /perfiles-permisos/:id` | `SUPER_ROLE` | Perfil eliminado; `409` si tiene usuarios |
+| `GET /proyectos` | Módulo `projects` | `{ items, total }` (`desde`, `limite`, `buscar` por nombre, clave o ciudad). Un admin solo ve los suyos |
+| `POST /proyectos` | `SUPER_ROLE` | Proyecto creado (`201`); `409` si la clave existe |
+| `GET/PATCH /proyectos/:proyectoId` | Módulo `projects` y acceso al proyecto | Proyecto; `403` si no es de sus proyectos |
+| `DELETE /proyectos/:proyectoId` | `SUPER_ROLE` | Proyecto eliminado (y sus asignaciones a usuarios) |
 
 Cada endpoint nuevo o modificado se agrega a esta tabla en el mismo commit.

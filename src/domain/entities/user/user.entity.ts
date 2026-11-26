@@ -11,6 +11,8 @@ export interface UserEntityOptions {
   password: string;
   rol: UserRole;
   permissionProfileId?: string;
+  /** Projects the user works in. Empty for SUPER_ROLE, which sees them all. */
+  proyectoIds: string[];
   img?: string;
   estado: boolean;
 }
@@ -25,6 +27,7 @@ export class UserEntity {
   public password: string;
   public rol: UserRole;
   public permissionProfileId?: string;
+  public proyectoIds: string[];
   public img?: string;
   public estado: boolean;
 
@@ -37,12 +40,13 @@ export class UserEntity {
     this.password = options.password;
     this.rol = options.rol;
     this.permissionProfileId = options.permissionProfileId;
+    this.proyectoIds = options.proyectoIds;
     this.img = options.img;
     this.estado = options.estado;
   }
 
   static fromObject(object: Record<string, unknown>): UserEntity {
-    const { id, nombre, apellido, correo, telefono, password, rol, permissionProfileId, img, estado } = object;
+    const { id, nombre, apellido, correo, telefono, password, rol, permissionProfileId, proyectoIds, img, estado } = object;
 
     if (!id) throw CustomError.badRequest("Missing id");
     if (!nombre) throw CustomError.badRequest("Missing nombre");
@@ -62,6 +66,9 @@ export class UserEntity {
       rol,
       permissionProfileId:
         typeof permissionProfileId === "string" && permissionProfileId.trim() ? permissionProfileId.trim() : undefined,
+      proyectoIds: Array.isArray(proyectoIds)
+        ? Array.from(new Set(proyectoIds.map((value) => String(value ?? "").trim()).filter(Boolean)))
+        : [],
       img: typeof img === "string" && img ? img : undefined,
       estado: Boolean(estado),
     });

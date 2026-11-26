@@ -14,6 +14,7 @@ const user = (overrides: Partial<UserEntity> = {}) =>
     password: "hash",
     rol: "ADMIN_ROLE",
     permissionProfileId: "p1",
+    proyectoIds: [],
     estado: true,
     ...overrides,
   });

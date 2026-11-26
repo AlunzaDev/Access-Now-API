@@ -19,10 +19,11 @@ datasource db {
   provider = "postgresql"
 }
 
-/// Dashboard sections a permission profile can open (src/domain/constants/user-modules.ts).
+/// Dashboard sections a permission profile can open (src/domain/constants/auth/user-modules.ts).
 enum UserModule {
   users
   permissionProfiles
+  projects
   events
   tickets
   scanners
@@ -68,6 +69,8 @@ model User {
 
   roleRef           Role               @relation(fields: [rol], references: [code], onDelete: Restrict)
   permissionProfile PermissionProfile? @relation(fields: [permissionProfileId], references: [id], onDelete: Restrict)
+  /// Projects the user works in. SUPER_ROLE sees every project and keeps none.
+  projects          UserProject[]
 
   @@index([rol])
   @@index([permissionProfileId])
@@ -86,4 +89,36 @@ model PermissionProfile {
   users User[]
 
   @@map("permission_profiles")
+}
+
+/// A venue or client: it owns its events and its SCAT scanners (one Raspberry Pi each).
+model Project {
+  id          String   @id @default(uuid(7)) @db.Uuid
+  nombre      String
+  /// Short stable code, unique, uppercase with dashes (e.g. ESTADIO-GDL).
+  clave       String   @unique
+  descripcion String   @default("")
+  direccion   String   @default("")
+  ciudad      String   @default("")
+  img         String   @default("")
+  /// An inactive project is hidden from its admins (SUPER_ROLE still sees it).
+  estado      Boolean  @default(true)
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  users UserProject[]
+
+  @@map("proyectos")
+}
+
+model UserProject {
+  userId    String @map("usuario_id") @db.Uuid
+  projectId String @map("proyecto_id") @db.Uuid
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@id([userId, projectId])
+  @@index([projectId])
+  @@map("usuario_proyectos")
 }

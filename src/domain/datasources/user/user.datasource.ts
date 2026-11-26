@@ -8,7 +8,8 @@ export type UserChanges = Partial<Omit<UserEntity, "id" | "permissionProfileId">
   permissionProfileId?: string | null;
 };
 
-export type UserListFilters = { buscar?: string };
+/** `proyectoIds` lists only the users in any of those projects (an admin's); undefined lists all. */
+export type UserListFilters = { buscar?: string; proyectoIds?: string[] };
 
 export interface UserDatasource {
   create(user: NewUser): Promise<UserEntity>;

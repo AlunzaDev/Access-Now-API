@@ -96,6 +96,7 @@ Los nombres de archivos y carpetas siguen [convencion-nombres.md](convencion-nom
 - El dashboard inicia sesión con `POST /api/auth/login` y manda el token en `Authorization: Bearer <token>`. El token solo lleva el id del usuario.
 - `requireAuth` vuelve a leer el usuario y su perfil en **cada** petición: desactivar un usuario o su perfil corta el acceso de inmediato.
 - `SUPER_ROLE` abre todos los módulos y no lleva perfil. `ADMIN_ROLE` abre solo los módulos de su perfil (`requireModules`). El perfil es global (los mismos módulos en todos sus proyectos).
+- **Proyectos:** cada usuario pertenece a uno o varios proyectos (`SUPER_ROLE` los ve todos). La sesión trae `proyectos`, y todo lo de un proyecto cuelga de `/api/proyectos/:proyectoId/...` con `requireProjectAccess()`. Los servicios reciben un `Actor` (`sessionActor(req)`) con su `projectAccess` y aplican `domain/policies/project/project-access-policy.ts`: un admin solo ve y administra usuarios de sus proyectos. Lo que no puede ver responde 404, como si no existiera.
 - Solo un super administrador puede crear, cambiar o eliminar a otro super administrador, y nadie puede desactivarse, cambiarse el rol o eliminarse a sí mismo (`domain/policies/user/user-management-policy.ts`).
 - Los scanners (SCAT) tendrán su propia autenticación por dispositivo (#7); no usan usuarios del dashboard.
 

@@ -5,4 +5,6 @@ export * from "./user/create-user.dto";
 export * from "./user/update-user.dto";
 export * from "./permission-profile/create-permission-profile.dto";
 export * from "./permission-profile/update-permission-profile.dto";
+export * from "./project/create-project.dto";
+export * from "./project/update-project.dto";
 export * from "./shared/pagination";

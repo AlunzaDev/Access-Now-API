@@ -2,6 +2,7 @@
 export const USER_MODULES = [
   "users",
   "permissionProfiles",
+  "projects",
   "events",
   "tickets",
   "scanners",
