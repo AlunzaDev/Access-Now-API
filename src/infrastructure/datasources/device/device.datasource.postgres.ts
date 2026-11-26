@@ -209,10 +209,14 @@ export class DevicePostgresDatasource implements DeviceDatasource {
   }
 
   async findByDeviceTokenHash(tokenHash: string): Promise<GatewayCredentials | null> {
-    const row = await this.devices.findFirst({ where: { deviceTokenHash: tokenHash, tipo: "GATEWAY" } });
+    const row = await this.devices.findFirst({
+      where: { deviceTokenHash: tokenHash, tipo: "GATEWAY" },
+      include: { project: { select: { id: true, nombre: true, clave: true } } },
+    });
     if (!row) return null;
     return {
       device: toEntity(row),
+      project: row.project,
       fingerprint: row.deviceFingerprint,
       enrolledAt: row.enrolledAt,
       expiresAt: row.enrollmentExpiresAt,

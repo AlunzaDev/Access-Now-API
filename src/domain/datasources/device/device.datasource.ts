@@ -22,6 +22,7 @@ export type DeviceListFilters = {
 /** A gateway found by its operational token, with what the API needs to accept it. */
 export type GatewayCredentials = {
   device: DeviceEntity;
+  project: { id: string; nombre: string; clave: string };
   fingerprint: string | null;
   enrolledAt: Date | null;
   expiresAt: Date | null;

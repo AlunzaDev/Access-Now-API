@@ -119,45 +119,6 @@ export class DeviceService {
     };
   }
 
-  async enroll(token: string, fingerprint: string, deviceName: string) {
-    const tokenHash = createHash("sha256").update(token).digest("hex");
-    const device = await this.devices.findByEnrollmentTokenHash(tokenHash);
-    if (!device || device.tipo !== "GATEWAY") throw CustomError.badRequest("Invalid token");
-    const stored = await this.devices.findEnrollmentData(device.id);
-    if (!stored?.tokenExpiresAt || stored.tokenExpiresAt.getTime() <= Date.now()) {
-      throw CustomError.badRequest("Invalid token");
-    }
-    const operationalToken = randomBytes(32).toString("hex");
-    const enrolledAt = new Date();
-    const expiresAt = stored.durationDays === null
-      ? null
-      : new Date(enrolledAt.getTime() + stored.durationDays * 24 * HOUR_MS);
-    await this.devices.completeEnrollment(
-      device.id,
-      createHash("sha256").update(operationalToken).digest("hex"),
-      fingerprint,
-      enrolledAt,
-      expiresAt,
-    );
-    await this.devices.addEvent(device.id, stored.enrolledAt ? "REENROLADO" : "ENROLADO", {
-      fingerprint,
-      nombreDispositivo: deviceName,
-      expiraEn: expiresAt?.getTime() ?? null,
-    });
-    // A new or reinstalled Raspberry starts empty: send it every terminal it must have.
-    await this.commands.syncGateway(device);
-    return {
-      token_type: "bearer",
-      token: operationalToken,
-      service: {
-        type: "online",
-        device: { id: device.id, name: deviceName, fingerprint },
-        expires_at: expiresAt?.toISOString() ?? null,
-        settings: {},
-      },
-    };
-  }
-
   /**
    * Real status: a gateway is online only with a recent heartbeat; a terminal, only when that
    * gateway is online and reports the terminal reachable.

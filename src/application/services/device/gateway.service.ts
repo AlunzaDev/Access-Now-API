@@ -1,4 +1,4 @@
-import { createHash } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 import type { GatewayCredentials } from "../../../domain/datasources/device/device.datasource";
 import type { HeartbeatDto, ReportedTerminal } from "../../../domain/dtos/device/heartbeat.dto";
 import type { DeliveredCommand } from "../../../domain/entities/device/device-command.entity";
@@ -18,6 +18,14 @@ export type HeartbeatAnswer = {
 };
 
 const hashToken = (token: string) => createHash("sha256").update(token).digest("hex");
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/** What the Raspberry keeps from its enrollment: who it is, where it belongs and how often to report. */
+export type GatewaySettings = {
+  proyecto: { id: string; nombre: string; clave: string };
+  gateway: { id: string; nombre: string };
+  intervaloSegundos: number;
+};
 
 /**
  * What a gateway (SCAT) does with its operational token: prove who it is, report that it is
@@ -41,12 +49,66 @@ export class GatewayService {
     return credentials;
   }
 
+  /**
+   * Exchanges a one-time enrollment token for the operational one (SCAT-compatible answer). The
+   * token itself stays opaque: what the Raspberry must know travels in `service.settings`. A new
+   * or reinstalled Raspberry starts empty, so it also gets a SINCRONIZAR with its terminals.
+   */
+  async enroll(token: string, fingerprint: string, deviceName: string) {
+    const device = await this.devices.findByEnrollmentTokenHash(hashToken(token));
+    if (!device || device.tipo !== "GATEWAY") throw CustomError.badRequest("Invalid token");
+    const stored = await this.devices.findEnrollmentData(device.id);
+    if (!stored?.tokenExpiresAt || stored.tokenExpiresAt.getTime() <= Date.now()) {
+      throw CustomError.badRequest("Invalid token");
+    }
+    const operationalToken = randomBytes(32).toString("hex");
+    const enrolledAt = new Date();
+    const expiresAt = stored.durationDays === null ? null : new Date(enrolledAt.getTime() + stored.durationDays * DAY_MS);
+    await this.devices.completeEnrollment(device.id, hashToken(operationalToken), fingerprint, enrolledAt, expiresAt);
+    await this.devices.addEvent(device.id, stored.enrolledAt ? "REENROLADO" : "ENROLADO", {
+      fingerprint,
+      nombreDispositivo: deviceName,
+      expiraEn: expiresAt?.getTime() ?? null,
+    });
+    await this.commands.syncGateway(device);
+
+    const credentials = await this.devices.findByDeviceTokenHash(hashToken(operationalToken));
+    if (!credentials) throw CustomError.internalServer("No se pudo completar el enrolamiento");
+    return {
+      token_type: "bearer",
+      token: operationalToken,
+      service: {
+        type: "online",
+        device: { id: device.id, name: deviceName, fingerprint },
+        expires_at: expiresAt?.toISOString() ?? null,
+        settings: this.settings(credentials),
+      },
+    };
+  }
+
   /** Same shape as the enrollment answer, so SCAT can check that its enrollment is still valid. */
-  me({ device, fingerprint, expiresAt }: GatewayCredentials) {
+  me(credentials: GatewayCredentials) {
+    const { device, fingerprint, expiresAt } = credentials;
     return {
       device: { id: device.id, name: device.nombre, fingerprint },
-      service: { type: "online", expires_at: expiresAt?.toISOString() ?? null, settings: {} },
+      service: {
+        type: "online",
+        expires_at: expiresAt?.toISOString() ?? null,
+        settings: this.settings(credentials),
+      },
     };
+  }
+
+  private settings({ device, project }: GatewayCredentials): GatewaySettings {
+    return {
+      proyecto: project,
+      gateway: { id: device.id, nombre: device.nombre },
+      intervaloSegundos: this.intervalSeconds,
+    };
+  }
+
+  private get intervalSeconds(): number {
+    return Math.round(this.timing.heartbeatIntervalMs / 1000);
   }
 
   /**
@@ -70,7 +132,7 @@ export class GatewayService {
     return {
       ok: true,
       serverTime: Date.now(),
-      intervaloSegundos: Math.round(this.timing.heartbeatIntervalMs / 1000),
+      intervaloSegundos: this.intervalSeconds,
       comandos: await this.commands.deliver(device.id),
       resultadosRecibidos,
     };

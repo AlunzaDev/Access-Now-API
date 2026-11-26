@@ -100,10 +100,20 @@ describe("gateway: token operativo, heartbeat, estado e historial", () => {
     });
     expect(enrolled.status).toBe(200);
     tokens.gateway = enrolled.body.token;
+    // The token stays opaque: where the Raspberry belongs travels in the answer.
+    const settings = {
+      proyecto: { id: ids.project, nombre: tag, clave: tag.toUpperCase() },
+      gateway: { id: ids.gateway, nombre: "GW" },
+      intervaloSegundos: 60,
+    };
+    expect(enrolled.body.service.settings).toEqual(settings);
 
     const me = await call("GET", "/v1/me", { token: tokens.gateway });
     expect(me.status).toBe(200);
-    expect(me.body).toMatchObject({ device: { id: ids.gateway, fingerprint: `fp-${tag}` }, service: { type: "online" } });
+    expect(me.body).toMatchObject({
+      device: { id: ids.gateway, fingerprint: `fp-${tag}` },
+      service: { type: "online", settings },
+    });
 
     expect((await call("GET", "/v1/me")).status).toBe(401);
     expect((await call("GET", "/v1/me", { token: "a".repeat(64) })).status).toBe(401);

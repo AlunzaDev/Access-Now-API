@@ -111,7 +111,7 @@ export class DeviceController {
       if (!token || !fingerprint || !deviceName) {
         return ErrorService.send(response, 400, "token, device_fingerprint y device_name son requeridos");
       }
-      return response.json(await this.service.enroll(token, fingerprint, deviceName));
+      return response.json(await this.gateways.enroll(token, fingerprint, deviceName));
     } catch (error) {
       return ErrorService.handleApiError(error, response);
     }
