@@ -2,6 +2,7 @@ import type { NextFunction, Request, Response } from "express";
 import type { SessionService, SessionUser } from "../../../application/services/auth/session.service";
 import type { Actor } from "../../../application/services/shared/actor";
 import { JwtPlugin } from "../../../config/plugins/jwt.plugin";
+import { setAuditActor } from "../../../config/audit-context";
 import type { UserModuleAccess, UserRole } from "../../../domain/constants";
 import { canOpenModule } from "../../../domain/policies/auth/session-policy";
 import { canAccessProject, projectAccessOf } from "../../../domain/policies/project/project-access-policy";
@@ -50,6 +51,7 @@ export const createAuthMiddleware = (sessions: SessionService) => ({
       if (!userId) return ErrorService.send(res, 401, "La sesión no es válida o expiró");
 
       authRequest.usuario = await sessions.forUserId(userId);
+      setAuditActor(authRequest.usuario);
       return next();
     } catch (error) {
       return ErrorService.handleApiError(error, res);

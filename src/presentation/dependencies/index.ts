@@ -6,6 +6,7 @@ import { SessionService } from "../../application/services/auth/session.service"
 import { ProjectService } from "../../application/services/project/project.service";
 import { PermissionProfileService } from "../../application/services/permission-profile/permission-profile.service";
 import { UserService } from "../../application/services/user/user.service";
+import { DeviceService } from "../../application/services/device/device.service";
 import { envs } from "../../config";
 import { NodemailerEmailSender } from "../../infrastructure/email/nodemailer-email.sender";
 import { LocalFileStorage, SpacesFileStorage } from "../../infrastructure/storage";
@@ -14,8 +15,10 @@ import { HealthController } from "../routes/health/health.controller";
 import { ProjectController } from "../routes/project/project.controller";
 import { PermissionProfileController } from "../routes/permission-profile/permission-profile.controller";
 import { UserController } from "../routes/user/user.controller";
+import { DeviceController } from "../routes/device/device.controller";
 import {
   buildPermissionProfileRepository,
+  buildDeviceRepository,
   buildProjectRepository,
   buildUserRepository,
 } from "./repositories/repositories.dependencies";
@@ -65,3 +68,5 @@ export const buildProjectController = () =>
   new ProjectController(new ProjectService(buildProjectRepository(), buildFileStorage()));
 
 export const buildHealthController = () => new HealthController();
+
+export const buildDeviceController = () => new DeviceController(new DeviceService(buildDeviceRepository()));

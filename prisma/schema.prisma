@@ -32,6 +32,29 @@ enum UserModule {
   @@map("user_module")
 }
 
+enum DeviceType {
+  GATEWAY
+  TERMINAL
+
+  @@map("tipo_dispositivo")
+}
+
+enum DeviceDirection {
+  ENTRADA
+  SALIDA
+  BIDIRECCIONAL
+
+  @@map("sentido_dispositivo")
+}
+
+enum DeviceConfigStatus {
+  PENDIENTE
+  CONFIGURADA
+  ERROR
+
+  @@map("estado_configuracion_dispositivo")
+}
+
 model Role {
   /// Stable code used by the API, e.g. SUPER_ROLE.
   code        String   @id
@@ -66,6 +89,10 @@ model User {
   estado                 Boolean   @default(true)
   createdAt              DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt              DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+  creadoPorId            String?   @map("creado_por_id") @db.Uuid
+  creadoPorNombre        String    @default("Sistema") @map("creado_por_nombre")
+  actualizadoPorId       String?   @map("actualizado_por_id") @db.Uuid
+  actualizadoPorNombre   String    @default("Sistema") @map("actualizado_por_nombre")
 
   roleRef           Role               @relation(fields: [rol], references: [code], onDelete: Restrict)
   permissionProfile PermissionProfile? @relation(fields: [permissionProfileId], references: [id], onDelete: Restrict)
@@ -85,6 +112,10 @@ model PermissionProfile {
   estado      Boolean      @default(true)
   createdAt   DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt   DateTime     @updatedAt @map("updated_at") @db.Timestamptz(3)
+  creadoPorId          String? @map("creado_por_id") @db.Uuid
+  creadoPorNombre      String  @default("Sistema") @map("creado_por_nombre")
+  actualizadoPorId     String? @map("actualizado_por_id") @db.Uuid
+  actualizadoPorNombre String  @default("Sistema") @map("actualizado_por_nombre")
 
   users User[]
 
@@ -107,10 +138,56 @@ model Project {
   estado      Boolean  @default(true)
   createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  creadoPorId          String? @map("creado_por_id") @db.Uuid
+  creadoPorNombre      String  @default("Sistema") @map("creado_por_nombre")
+  actualizadoPorId     String? @map("actualizado_por_id") @db.Uuid
+  actualizadoPorNombre String  @default("Sistema") @map("actualizado_por_nombre")
 
   users UserProject[]
+  devices Device[]
 
   @@map("proyectos")
+}
+
+model Device {
+  id                       String             @id @default(uuid(7)) @db.Uuid
+  projectId                String             @map("proyecto_id") @db.Uuid
+  tipo                     DeviceType
+  nombre                   String
+  ip                       String
+  mac                      String?
+  modelo                   String             @default("")
+  estado                   Boolean            @default(true)
+  gatewayId                String?            @map("gateway_id") @db.Uuid
+  carril                   String?
+  sentido                  DeviceDirection?
+  configEstado             DeviceConfigStatus @default(PENDIENTE) @map("config_estado")
+  configError              String             @default("") @map("config_error")
+  urlRemota                String             @default("") @map("url_remota")
+  version                  String             @default("")
+  ultimaConexion           DateTime?          @map("ultima_conexion") @db.Timestamptz(3)
+  enrollmentTokenHash      String?            @map("enrollment_token_hash")
+  enrollmentTokenExpiresAt DateTime?          @map("enrollment_token_expires_at") @db.Timestamptz(3)
+  enrollmentDurationDays   Int?               @map("enrollment_duration_days")
+  deviceTokenHash          String?            @map("device_token_hash")
+  deviceFingerprint        String?            @map("device_fingerprint")
+  enrolledAt               DateTime?          @map("enrolled_at") @db.Timestamptz(3)
+  enrollmentExpiresAt      DateTime?          @map("enrollment_expires_at") @db.Timestamptz(3)
+  createdAt                DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt                DateTime           @updatedAt @map("updated_at") @db.Timestamptz(3)
+  creadoPorId              String?            @map("creado_por_id") @db.Uuid
+  creadoPorNombre          String             @default("Sistema") @map("creado_por_nombre")
+  actualizadoPorId         String?            @map("actualizado_por_id") @db.Uuid
+  actualizadoPorNombre     String             @default("Sistema") @map("actualizado_por_nombre")
+
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  gateway   Device?  @relation("GatewayTerminals", fields: [gatewayId], references: [id], onDelete: Restrict)
+  terminals Device[] @relation("GatewayTerminals")
+
+  @@unique([projectId, mac])
+  @@index([projectId, tipo])
+  @@index([gatewayId])
+  @@map("dispositivos")
 }
 
 model UserProject {

@@ -59,6 +59,11 @@ Para agregar una operación:
 5. Controlador y ruta en `presentation/routes/<módulo>/`; el builder en `presentation/dependencies`.
 6. Prueba de integración en `tests/integration` para permisos, errores y la forma de la respuesta.
 
+Los dispositivos pertenecen siempre a un proyecto y se administran bajo
+`/api/proyectos/:proyectoId/dispositivos`. `DeviceService` valida los campos exclusivos de gateways y
+terminales, la pertenencia del gateway y el ciclo de vida del token de enrolamiento; el datasource no
+expone los hashes guardados.
+
 Si un servicio necesita algo que no es un repositorio (mandar un correo, guardar un archivo, cobrar), se agrega una interfaz en `domain/ports` y su implementación en `infrastructure`; `presentation/dependencies` las conecta.
 
 ## Qué se puede importar
@@ -102,3 +107,19 @@ Los nombres de archivos y carpetas siguen [convencion-nombres.md](convencion-nom
 - Los scanners (SCAT) tendrán su propia autenticación por dispositivo (#7); no usan usuarios del dashboard.
 
 Excepciones conocidas: `server.ts` conecta la base al arrancar y `routes/health` consulta el estado de la conexión; ambos usan `PostgresDatabase` directamente porque ese es su propósito.
+
+## Auditoría y trazabilidad
+
+La trazabilidad es parte del dominio y no un detalle exclusivo de la interfaz. Toda entidad de negocio
+debe conservar como mínimo quién y cuándo la creó, y quién y cuándo realizó su última modificación. Esta
+regla aplica a usuarios, perfiles, proyectos, dispositivos, eventos, órdenes y especialmente boletos.
+
+- Las escrituras autenticadas reciben el actor de la sesión; el cliente nunca decide la identidad del autor.
+- Los procesos sin usuario se registran con un actor de sistema y se muestran como `Sistema`.
+- La API expone la auditoría con nombres de contrato en español: `creadoPor`, `creadoEn`, `actualizadoPor`
+  y `actualizadoEn`. Los actores públicos incluyen al menos `id` y `nombre`; nunca datos sensibles.
+- La trazabilidad histórica no desaparece al desactivar, renombrar o eliminar lógicamente a un usuario.
+- En boletos, validaciones, cancelaciones, reasignaciones y cambios de estado también deben quedar en un
+  historial inmutable; no basta con conservar únicamente el último cambio.
+- Las migraciones y servicios de cada módulo son responsables de guardar estos datos de manera atómica con
+  la operación de negocio. Las pruebas de integración comprueban autor y fechas.

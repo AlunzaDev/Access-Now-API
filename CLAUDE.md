@@ -19,3 +19,6 @@ Reglas rápidas:
 - Endpoint nuevo o cambiado: actualiza la tabla de `docs/contrato-api.md` y su prueba de integración en el mismo commit.
 - Antes de dar algo por terminado: `npm run verify` en verde (desde `C:\` en mayúscula en Windows).
 - Cambios de esquema: `npm run db:migrate -- --name <cambio>` y revisa el SQL generado antes de commitear.
+- Toda entidad de negocio debe ser auditable: conserva y expone quién y cuándo la creó y quién y cuándo
+  realizó la última modificación. Es obligatorio en boletos y aplica también a usuarios, proyectos,
+  dispositivos, eventos y los módulos nuevos. Las operaciones automáticas se atribuyen a `Sistema`.

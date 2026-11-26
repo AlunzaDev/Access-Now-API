@@ -8,6 +8,7 @@ import { toPage, type Page, type PageRequest } from "../../../domain/dtos/shared
 import { ProjectEntity } from "../../../domain/entities/project/project.entity";
 import type { Prisma, Project } from "../../../generated/prisma/client";
 import { PostgresDatabase } from "../../prisma/postgres.database";
+import { currentAuditWrite } from "../../../config/audit-context";
 import { isUuid, withPrismaErrors } from "../../prisma/prisma-errors";
 
 const toEntity = (row: Project) =>
@@ -22,6 +23,12 @@ const toEntity = (row: Project) =>
     latitud: row.latitud,
     longitud: row.longitud,
     estado: row.estado,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+    creadoPorId: row.creadoPorId,
+    creadoPorNombre: row.creadoPorNombre,
+    actualizadoPorId: row.actualizadoPorId,
+    actualizadoPorNombre: row.actualizadoPorNombre,
   });
 
 const listWhere = ({ buscar, ids }: ProjectListFilters): Prisma.ProjectWhereInput => ({
@@ -43,6 +50,7 @@ export class ProjectPostgresDatasource implements ProjectDatasource {
   }
 
   async create(project: NewProject): Promise<ProjectEntity> {
+    const audit = currentAuditWrite();
     const row = await withPrismaErrors(() =>
       this.projects.create({
         data: {
@@ -55,6 +63,10 @@ export class ProjectPostgresDatasource implements ProjectDatasource {
           latitud: project.latitud,
           longitud: project.longitud,
           estado: project.estado,
+          creadoPorId: audit.actorId,
+          creadoPorNombre: audit.actorNombre,
+          actualizadoPorId: audit.actorId,
+          actualizadoPorNombre: audit.actorNombre,
         },
       }),
     );
@@ -95,7 +107,17 @@ export class ProjectPostgresDatasource implements ProjectDatasource {
 
   async update(id: string, changes: ProjectChanges): Promise<ProjectEntity | null> {
     if (!(await this.findById(id))) return null;
-    const row = await withPrismaErrors(() => this.projects.update({ where: { id }, data: changes }));
+    const audit = currentAuditWrite();
+    const row = await withPrismaErrors(() =>
+      this.projects.update({
+        where: { id },
+        data: {
+          ...changes,
+          actualizadoPorId: audit.actorId,
+          actualizadoPorNombre: audit.actorNombre,
+        },
+      }),
+    );
     return toEntity(row);
   }
 

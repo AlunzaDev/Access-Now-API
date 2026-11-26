@@ -1,7 +1,8 @@
 import { getInvalidUserModules, normalizeUserModules, type UserModuleAccess } from "../../constants";
 import { CustomError } from "../../errors/custom.error";
+import { auditFieldsFromObject, systemAuditFields, type AuditFields } from "../shared/audit.entity";
 
-export interface PermissionProfileEntityOptions {
+export interface PermissionProfileEntityOptions extends Partial<AuditFields> {
   id: string;
   nombre: string;
   descripcion?: string;
@@ -16,13 +17,22 @@ export class PermissionProfileEntity {
   public descripcion?: string;
   public modules: UserModuleAccess[];
   public estado: boolean;
+  public creadoPor: AuditFields["creadoPor"];
+  public creadoEn: number;
+  public actualizadoPor: AuditFields["actualizadoPor"];
+  public actualizadoEn: number;
 
   constructor(options: PermissionProfileEntityOptions) {
+    const audit = { ...systemAuditFields(), ...options };
     this.id = options.id;
     this.nombre = options.nombre;
     this.descripcion = options.descripcion;
     this.modules = options.modules;
     this.estado = options.estado;
+    this.creadoPor = audit.creadoPor;
+    this.creadoEn = audit.creadoEn;
+    this.actualizadoPor = audit.actualizadoPor;
+    this.actualizadoEn = audit.actualizadoEn;
   }
 
   static fromObject(object: Record<string, unknown>): PermissionProfileEntity {
@@ -44,6 +54,7 @@ export class PermissionProfileEntity {
         typeof object.descripcion === "string" && object.descripcion.trim() ? object.descripcion.trim() : undefined,
       modules: normalizeUserModules(object.modules),
       estado: object.estado === undefined ? true : Boolean(object.estado),
+      ...auditFieldsFromObject(object),
     });
   }
 }

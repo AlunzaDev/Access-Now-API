@@ -9,6 +9,7 @@ import { UserEntity } from "../../../domain/entities/user/user.entity";
 import { CustomError } from "../../../domain/errors/custom.error";
 import type { Prisma } from "../../../generated/prisma/client";
 import { PostgresDatabase } from "../../prisma/postgres.database";
+import { currentAuditWrite } from "../../../config/audit-context";
 import { isUuid, withPrismaErrors } from "../../prisma/prisma-errors";
 
 /** Relations needed to build a UserEntity (its project ids). */
@@ -29,6 +30,12 @@ const toEntity = (row: UserRow): UserEntity =>
     proyectoIds: row.projects.map((link) => link.projectId),
     img: row.img,
     estado: row.estado,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+    creadoPorId: row.creadoPorId,
+    creadoPorNombre: row.creadoPorNombre,
+    actualizadoPorId: row.actualizadoPorId,
+    actualizadoPorNombre: row.actualizadoPorNombre,
   });
 
 const invalidReference = CustomError.badRequest("El perfil de permisos o un proyecto asignado no existe");
@@ -54,6 +61,7 @@ export class UserPostgresDatasource implements UserDatasource {
   }
 
   async create(user: NewUser): Promise<UserEntity> {
+    const audit = currentAuditWrite();
     const row = await withPrismaErrors(
       () =>
         this.users.create({
@@ -67,6 +75,10 @@ export class UserPostgresDatasource implements UserDatasource {
             permissionProfileId: user.permissionProfileId ?? null,
             img: user.img ?? "",
             estado: user.estado,
+            creadoPorId: audit.actorId,
+            creadoPorNombre: audit.actorNombre,
+            actualizadoPorId: audit.actorId,
+            actualizadoPorNombre: audit.actorNombre,
             projects: { create: projectLinks(user.proyectoIds) },
           },
           include: userInclude,
@@ -105,6 +117,7 @@ export class UserPostgresDatasource implements UserDatasource {
   async update(id: string, changes: UserChanges): Promise<UserEntity | null> {
     if (!(await this.findById(id))) return null;
     // Projects are replaced as a whole when sent, in the same transaction as the rest.
+    const audit = currentAuditWrite();
     const row = await withPrismaErrors(
       () =>
         PostgresDatabase.client.$transaction(async (tx) => {
@@ -127,6 +140,8 @@ export class UserPostgresDatasource implements UserDatasource {
               permissionProfileId: changes.permissionProfileId,
               img: changes.img,
               estado: changes.estado,
+              actualizadoPorId: audit.actorId,
+              actualizadoPorNombre: audit.actorNombre,
             },
           });
         }),
@@ -168,7 +183,15 @@ export class UserPostgresDatasource implements UserDatasource {
   }
 
   private async updateExisting(id: string, data: Prisma.UserUpdateManyMutationInput): Promise<void> {
-    const { count } = isUuid(id) ? await this.users.updateMany({ where: { id }, data }) : { count: 0 };
+    const audit = currentAuditWrite();
+    const auditedData = {
+      ...data,
+      actualizadoPorId: audit.actorId,
+      actualizadoPorNombre: audit.actorNombre,
+    };
+    const { count } = isUuid(id)
+      ? await this.users.updateMany({ where: { id }, data: auditedData })
+      : { count: 0 };
     if (!count) throw CustomError.notFound("Usuario no encontrado");
   }
 }

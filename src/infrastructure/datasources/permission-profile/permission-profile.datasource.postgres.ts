@@ -8,6 +8,7 @@ import { PermissionProfileEntity } from "../../../domain/entities/permission-pro
 import { CustomError } from "../../../domain/errors/custom.error";
 import type { PermissionProfile, Prisma } from "../../../generated/prisma/client";
 import { PostgresDatabase } from "../../prisma/postgres.database";
+import { currentAuditWrite } from "../../../config/audit-context";
 import { isUuid, withPrismaErrors } from "../../prisma/prisma-errors";
 
 const toEntity = (row: PermissionProfile) =>
@@ -17,6 +18,12 @@ const toEntity = (row: PermissionProfile) =>
     descripcion: row.descripcion,
     modules: row.modules,
     estado: row.estado,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+    creadoPorId: row.creadoPorId,
+    creadoPorNombre: row.creadoPorNombre,
+    actualizadoPorId: row.actualizadoPorId,
+    actualizadoPorNombre: row.actualizadoPorNombre,
   });
 
 const profileInUse = CustomError.conflict("No se puede eliminar el perfil porque está asignado a usuarios");
@@ -27,6 +34,7 @@ export class PermissionProfilePostgresDatasource implements PermissionProfileDat
   }
 
   async create(profile: NewPermissionProfile): Promise<PermissionProfileEntity> {
+    const audit = currentAuditWrite();
     const row = await withPrismaErrors(() =>
       this.profiles.create({
         data: {
@@ -34,6 +42,10 @@ export class PermissionProfilePostgresDatasource implements PermissionProfileDat
           descripcion: profile.descripcion ?? "",
           modules: profile.modules,
           estado: profile.estado,
+          creadoPorId: audit.actorId,
+          creadoPorNombre: audit.actorNombre,
+          actualizadoPorId: audit.actorId,
+          actualizadoPorNombre: audit.actorNombre,
         },
       }),
     );
@@ -64,6 +76,7 @@ export class PermissionProfilePostgresDatasource implements PermissionProfileDat
 
   async update(id: string, changes: PermissionProfileChanges): Promise<PermissionProfileEntity | null> {
     if (!(await this.findById(id))) return null;
+    const audit = currentAuditWrite();
     const row = await withPrismaErrors(() =>
       this.profiles.update({
         where: { id },
@@ -72,6 +85,8 @@ export class PermissionProfilePostgresDatasource implements PermissionProfileDat
           descripcion: changes.descripcion,
           modules: changes.modules,
           estado: changes.estado,
+          actualizadoPorId: audit.actorId,
+          actualizadoPorNombre: audit.actorNombre,
         },
       }),
     );

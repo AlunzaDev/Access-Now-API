@@ -1,7 +1,8 @@
 import { isUserRole, type UserRole } from "../../constants";
 import { CustomError } from "../../errors/custom.error";
+import { auditFieldsFromObject, systemAuditFields, type AuditFields } from "../shared/audit.entity";
 
-export interface UserEntityOptions {
+export interface UserEntityOptions extends Partial<AuditFields> {
   id: string;
   nombre: string;
   apellido: string;
@@ -30,8 +31,13 @@ export class UserEntity {
   public proyectoIds: string[];
   public img?: string;
   public estado: boolean;
+  public creadoPor: AuditFields["creadoPor"];
+  public creadoEn: number;
+  public actualizadoPor: AuditFields["actualizadoPor"];
+  public actualizadoEn: number;
 
   constructor(options: UserEntityOptions) {
+    const audit = { ...systemAuditFields(), ...options };
     this.id = options.id;
     this.nombre = options.nombre;
     this.apellido = options.apellido;
@@ -43,6 +49,10 @@ export class UserEntity {
     this.proyectoIds = options.proyectoIds;
     this.img = options.img;
     this.estado = options.estado;
+    this.creadoPor = audit.creadoPor;
+    this.creadoEn = audit.creadoEn;
+    this.actualizadoPor = audit.actualizadoPor;
+    this.actualizadoEn = audit.actualizadoEn;
   }
 
   static fromObject(object: Record<string, unknown>): UserEntity {
@@ -71,6 +81,7 @@ export class UserEntity {
         : [],
       img: typeof img === "string" && img ? img : undefined,
       estado: Boolean(estado),
+      ...auditFieldsFromObject(object),
     });
   }
 }

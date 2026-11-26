@@ -1,7 +1,7 @@
 import type { Page, PageRequest } from "../../dtos/shared/pagination";
 import type { ProjectEntity } from "../../entities/project/project.entity";
 
-export type NewProject = Omit<ProjectEntity, "id">;
+export type NewProject = Omit<ProjectEntity, "id" | "creadoPor" | "creadoEn" | "actualizadoPor" | "actualizadoEn">;
 export type ProjectChanges = Partial<NewProject>;
 
 /** `ids` limits the list to those projects (an admin's); undefined lists all (super admin). */

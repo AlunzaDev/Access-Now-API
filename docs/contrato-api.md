@@ -37,6 +37,17 @@ Reglas del frontend:
 - Un listado: `{ "items": [...], "total": n }` (ver "Paginación").
 - Login y renovar sesión: `{ "token": "…", "usuario": { …, "modules": [...], "proyectos": [{ "id", "nombre", "clave", "estado" }] } }`. `SUPER_ROLE` recibe todos los proyectos; `ADMIN_ROLE`, sus proyectos activos.
 - Nunca se responde `password` ni tokens de recuperación.
+- Nunca se responden `enrollmentTokenHash` ni `enrollmentTokenExpiresAt`; el token de enrolamiento se muestra una vez.
+
+### Auditoría visible
+
+Toda entidad de negocio incluye `creadoPor`, `creadoEn`, `actualizadoPor` y `actualizadoEn`. `creadoPor` y
+`actualizadoPor` identifican públicamente al usuario con al menos `{ "id", "nombre" }`; una operación
+automática se representa como `Sistema`. Las fechas usan ISO 8601. El cliente no envía ni puede modificar
+estos campos.
+
+Los boletos incluyen además un historial inmutable de acciones relevantes (creación, validación,
+cancelación, reasignación y cambios de estado), con acción, actor y fecha.
 
 ## Paginación
 
@@ -69,6 +80,10 @@ El frontend valida lo mismo antes de enviar; el backend es la fuente de verdad.
 | Clave de proyecto | Única; se guarda en mayúsculas, sin acentos y con guiones (`"Estadio gdl"` → `ESTADIO-GDL`), máximo 40 |
 | Ubicación de proyecto | `latitud` y `longitud` se envían ambas o ninguna; aceptan `null` para quitarla; rangos -90..90 y -180..180 |
 | Imagen de proyecto | Multipart campo `imagen`; JPG, PNG o WebP; máximo 5 MB |
+| MAC de dispositivo | Se normaliza como `AA:BB:CC:DD:EE:FF`; única dentro del proyecto; opcional solo para gateways |
+| IPv4 de dispositivo | Cuatro octetos decimales entre 0 y 255 |
+| Terminal | Requiere `gatewayId`, `mac` y `sentido`: `ENTRADA`, `SALIDA` o `BIDIRECCIONAL`; `carril` es opcional |
+| Gateway | No acepta campos de terminal; no se elimina mientras tenga terminales (`409`) |
 | `proyectoIds` de un usuario | UUIDs de proyectos existentes. Se ignora para `SUPER_ROLE`. Un admin solo asigna sus propios proyectos (403 si no) y debe dejar al menos uno; los proyectos que no ve se conservan |
 
 ## Endpoints
@@ -96,5 +111,10 @@ El frontend valida lo mismo antes de enviar; el backend es la fuente de verdad.
 | `PUT /proyectos/:proyectoId/imagen` | Módulo `projects` y acceso al proyecto | Proyecto actualizado. Multipart campo `imagen` |
 | `DELETE /proyectos/:proyectoId/imagen` | Módulo `projects` y acceso al proyecto | Proyecto actualizado con `img: ""` |
 | `DELETE /proyectos/:proyectoId` | `SUPER_ROLE` | Proyecto eliminado (y sus asignaciones a usuarios) |
+| `GET /proyectos/:proyectoId/dispositivos` | Módulo `scanners` y acceso al proyecto | `{ items, total }`; filtros `tipo`, `gatewayId`, `buscar`, `desde`, `limite` |
+| `POST /proyectos/:proyectoId/dispositivos` | Módulo `scanners` y acceso al proyecto | Dispositivo creado (`201`) |
+| `GET/PATCH/DELETE /proyectos/:proyectoId/dispositivos/:id` | Módulo `scanners` y acceso al proyecto | Dispositivo; otro proyecto responde `404` |
+| `POST /proyectos/:proyectoId/dispositivos/:id/token-enrolamiento` | Módulo `scanners` y acceso al proyecto | Solo gateway; recibe vigencia de 1/24/168 horas y enrolamiento de 30/90 días o sin vencimiento; token visible una vez |
+| `POST /v1/device/enroll` | Público con token de enrolamiento | Contrato SCAT: recibe `{ token, device_fingerprint, device_name }`; consume el token y responde `{ token_type, token, service }` |
 
 Cada endpoint nuevo o modificado se agrega a esta tabla en el mismo commit.

@@ -1,10 +1,12 @@
 import type { Page, PageRequest } from "../../dtos/shared/pagination";
 import type { UserEntity } from "../../entities/user/user.entity";
 
-export type NewUser = Omit<UserEntity, "id">;
+export type NewUser = Omit<UserEntity, "id" | "creadoPor" | "creadoEn" | "actualizadoPor" | "actualizadoEn">;
 
 /** Fields to change; `permissionProfileId: null` removes the profile. */
-export type UserChanges = Partial<Omit<UserEntity, "id" | "permissionProfileId">> & {
+export type UserChanges = Partial<
+  Omit<UserEntity, "id" | "permissionProfileId" | "creadoPor" | "creadoEn" | "actualizadoPor" | "actualizadoEn">
+> & {
   permissionProfileId?: string | null;
 };
 

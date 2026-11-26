@@ -1,6 +1,7 @@
 import { CustomError } from "../../errors/custom.error";
+import { auditFieldsFromObject, type AuditFields } from "../shared/audit.entity";
 
-export interface ProjectEntityOptions {
+export interface ProjectEntityOptions extends AuditFields {
   id: string;
   nombre: string;
   clave: string;
@@ -25,6 +26,10 @@ export class ProjectEntity {
   public latitud: number | null;
   public longitud: number | null;
   public estado: boolean;
+  public creadoPor: AuditFields["creadoPor"];
+  public creadoEn: number;
+  public actualizadoPor: AuditFields["actualizadoPor"];
+  public actualizadoEn: number;
 
   constructor(options: ProjectEntityOptions) {
     this.id = options.id;
@@ -37,6 +42,10 @@ export class ProjectEntity {
     this.latitud = options.latitud;
     this.longitud = options.longitud;
     this.estado = options.estado;
+    this.creadoPor = options.creadoPor;
+    this.creadoEn = options.creadoEn;
+    this.actualizadoPor = options.actualizadoPor;
+    this.actualizadoEn = options.actualizadoEn;
   }
 
   static fromObject(object: Record<string, unknown>): ProjectEntity {
@@ -56,6 +65,7 @@ export class ProjectEntity {
       latitud: typeof object.latitud === "number" ? object.latitud : null,
       longitud: typeof object.longitud === "number" ? object.longitud : null,
       estado: object.estado !== false,
+      ...auditFieldsFromObject(object),
     });
   }
 }
