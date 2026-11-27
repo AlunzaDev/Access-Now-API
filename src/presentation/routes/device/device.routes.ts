@@ -1,9 +1,9 @@
 import { Router } from "express";
 import type { AuthMiddleware, GatewayAuthMiddleware } from "../../../api/middlewares";
 import { failedAuthLimiter } from "../../../api/middlewares/rate-limit/rate-limit.middleware";
+import { buildDeviceController, buildTicketCatalogController, buildTicketController } from "../../dependencies";
 
 const FIFTEEN_MINUTES = 15 * 60 * 1000;
-import { buildDeviceController, buildTicketController } from "../../dependencies";
 
 export class DeviceRoutes {
   /** /api/v1: the SCAT-compatible gateway API (enroll with the enrollment token; the rest with the operational one). */
@@ -11,6 +11,7 @@ export class DeviceRoutes {
     const router = Router();
     const controller = buildDeviceController();
     const tickets = buildTicketController();
+    const catalog = buildTicketCatalogController();
     // Guessing is pointless (256-bit tokens), but failed attempts are capped per address so
     // nobody can hammer the gateway API. Valid calls never count.
     const enrollLimit = failedAuthLimiter({ windowMs: FIFTEEN_MINUTES, maxFailures: 10, failureStatuses: [400, 401, 403] });
@@ -19,6 +20,8 @@ export class DeviceRoutes {
     router.get("/me", tokenLimit, gateway.requireGateway, controller.me);
     router.post("/device/heartbeat", tokenLimit, gateway.requireGateway, controller.heartbeat);
     router.post("/tickets/validate", tokenLimit, gateway.requireGateway, tickets.validateAccess);
+    router.get("/tickets/catalogo", tokenLimit, gateway.requireGateway, catalog.catalog);
+    router.post("/tickets/escaneos-offline", tokenLimit, gateway.requireGateway, catalog.offlineScans);
     return router;
   }
 

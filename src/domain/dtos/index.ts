@@ -6,6 +6,7 @@ export * from "./device/update-device.dto";
 export * from "./device/heartbeat.dto";
 export * from "./event/event.dto";
 export * from "./ticket/ticket.dto";
+export * from "./ticket/offline-scans.dto";
 export * from "./user/create-user.dto";
 export * from "./user/update-user.dto";
 export * from "./permission-profile/create-permission-profile.dto";
