@@ -31,8 +31,9 @@ const toEntity = (row: Project) =>
     actualizadoPorNombre: row.actualizadoPorNombre,
   });
 
-const listWhere = ({ buscar, ids }: ProjectListFilters): Prisma.ProjectWhereInput => ({
+const listWhere = ({ buscar, ids, estado }: ProjectListFilters): Prisma.ProjectWhereInput => ({
   ...(ids ? { id: { in: ids.filter(isUuid) } } : {}),
+  ...(estado === undefined ? {} : { estado }),
   ...(buscar
     ? {
         OR: [

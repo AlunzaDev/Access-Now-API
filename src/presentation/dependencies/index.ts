@@ -10,6 +10,8 @@ import { DeviceService } from "../../application/services/device/device.service"
 import { DevicePresenceMonitor } from "../../application/services/device/device-presence.monitor";
 import { GatewayService } from "../../application/services/device/gateway.service";
 import { DeviceCommandService } from "../../application/services/device/device-command.service";
+import { EventService } from "../../application/services/event/event.service";
+import { TicketService } from "../../application/services/ticket/ticket.service";
 import { createGatewayAuthMiddleware } from "../../api/middlewares/gateway/gateway-auth.middleware";
 import { envs } from "../../config";
 import { NodemailerEmailSender } from "../../infrastructure/email/nodemailer-email.sender";
@@ -20,12 +22,16 @@ import { ProjectController } from "../routes/project/project.controller";
 import { PermissionProfileController } from "../routes/permission-profile/permission-profile.controller";
 import { UserController } from "../routes/user/user.controller";
 import { DeviceController } from "../routes/device/device.controller";
+import { EventController } from "../routes/event/event.controller";
+import { TicketController } from "../routes/ticket/ticket.controller";
 import {
   buildPermissionProfileRepository,
   buildDeviceCommandRepository,
   buildDeviceRepository,
   buildProjectRepository,
   buildUserRepository,
+  buildEventRepository,
+  buildTicketRepository,
 } from "./repositories/repositories.dependencies";
 
 const buildSessionService = () =>
@@ -71,6 +77,12 @@ const buildFileStorage = () => {
 
 export const buildProjectController = () =>
   new ProjectController(new ProjectService(buildProjectRepository(), buildFileStorage()));
+
+export const buildEventController = () =>
+  new EventController(new EventService(buildEventRepository(), buildFileStorage(), buildTicketRepository()));
+
+export const buildTicketController = () =>
+  new TicketController(new TicketService(buildTicketRepository(), envs.TICKET_QR_ENCRYPTION_KEY));
 
 export const buildHealthController = () => new HealthController();
 

@@ -4,6 +4,7 @@ import type { PermissionProfileService } from "../../../application/services/per
 import { USER_MODULES } from "../../../domain/constants";
 import {
   CreatePermissionProfileDto,
+  parseActiveStatus,
   parsePagination,
   parseSearch,
   UpdatePermissionProfileDto,
@@ -29,7 +30,10 @@ export class PermissionProfileController {
   list = async (req: Request, res: Response) => {
     try {
       const query = queryOf(req);
-      return res.json(await this.service.list({ buscar: parseSearch(query.buscar) }, parsePagination(query, 50)));
+      return res.json(await this.service.list({
+        buscar: parseSearch(query.buscar),
+        estado: parseActiveStatus(query.estado),
+      }, parsePagination(query, 50)));
     } catch (error) {
       return ErrorService.handleApiError(error, res);
     }

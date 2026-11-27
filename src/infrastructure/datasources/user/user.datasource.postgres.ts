@@ -40,8 +40,9 @@ const toEntity = (row: UserRow): UserEntity =>
 
 const invalidReference = CustomError.badRequest("El perfil de permisos o un proyecto asignado no existe");
 
-const listWhere = ({ buscar, proyectoIds }: UserListFilters): Prisma.UserWhereInput => ({
+const listWhere = ({ buscar, proyectoIds, estado }: UserListFilters): Prisma.UserWhereInput => ({
   ...(proyectoIds ? { projects: { some: { projectId: { in: proyectoIds.filter(isUuid) } } } } : {}),
+  ...(estado === undefined ? {} : { estado }),
   ...(buscar
     ? {
         OR: [

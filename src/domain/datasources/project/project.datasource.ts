@@ -5,7 +5,7 @@ export type NewProject = Omit<ProjectEntity, "id" | "creadoPor" | "creadoEn" | "
 export type ProjectChanges = Partial<NewProject>;
 
 /** `ids` limits the list to those projects (an admin's); undefined lists all (super admin). */
-export type ProjectListFilters = { buscar?: string; ids?: string[] };
+export type ProjectListFilters = { buscar?: string; ids?: string[]; estado?: boolean };
 
 export interface ProjectDatasource {
   create(project: NewProject): Promise<ProjectEntity>;

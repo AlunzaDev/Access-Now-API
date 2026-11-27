@@ -2,6 +2,8 @@ export * from "./auth/auth.service";
 export * from "./auth/session.service";
 export * from "./device/device-presence.monitor";
 export * from "./device/device.service";
+export * from "./event/event.service";
+export * from "./ticket/ticket.service";
 export * from "./device/gateway.service";
 export * from "./permission-profile/permission-profile.service";
 export * from "./project/project.service";

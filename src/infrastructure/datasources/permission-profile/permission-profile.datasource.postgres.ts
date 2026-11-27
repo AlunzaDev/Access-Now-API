@@ -52,10 +52,14 @@ export class PermissionProfilePostgresDatasource implements PermissionProfileDat
     return toEntity(row);
   }
 
-  async list({ buscar }: { buscar?: string }, { desde, limite }: PageRequest): Promise<Page<PermissionProfileEntity>> {
-    const where: Prisma.PermissionProfileWhereInput = buscar
-      ? { nombre: { contains: buscar, mode: "insensitive" } }
-      : {};
+  async list(
+    { buscar, estado }: { buscar?: string; estado?: boolean },
+    { desde, limite }: PageRequest,
+  ): Promise<Page<PermissionProfileEntity>> {
+    const where: Prisma.PermissionProfileWhereInput = {
+      ...(buscar ? { nombre: { contains: buscar, mode: "insensitive" } } : {}),
+      ...(estado === undefined ? {} : { estado }),
+    };
     const [rows, total] = await Promise.all([
       this.profiles.findMany({ where, orderBy: [{ nombre: "asc" }], skip: desde, take: limite }),
       this.profiles.count({ where }),

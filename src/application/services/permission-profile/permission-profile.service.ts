@@ -25,7 +25,7 @@ export class PermissionProfileService {
     });
   }
 
-  list(filters: { buscar?: string }, page: PageRequest): Promise<Page<PermissionProfileEntity>> {
+  list(filters: { buscar?: string; estado?: boolean }, page: PageRequest): Promise<Page<PermissionProfileEntity>> {
     return this.profiles.list(filters, page);
   }
 

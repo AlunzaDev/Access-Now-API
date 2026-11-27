@@ -3,13 +3,14 @@ import type { AuthMiddleware, GatewayAuthMiddleware } from "../../../api/middlew
 import { failedAuthLimiter } from "../../../api/middlewares/rate-limit/rate-limit.middleware";
 
 const FIFTEEN_MINUTES = 15 * 60 * 1000;
-import { buildDeviceController } from "../../dependencies";
+import { buildDeviceController, buildTicketController } from "../../dependencies";
 
 export class DeviceRoutes {
   /** /api/v1: the SCAT-compatible gateway API (enroll with the enrollment token; the rest with the operational one). */
   static enrollment(gateway: GatewayAuthMiddleware): Router {
     const router = Router();
     const controller = buildDeviceController();
+    const tickets = buildTicketController();
     // Guessing is pointless (256-bit tokens), but failed attempts are capped per address so
     // nobody can hammer the gateway API. Valid calls never count.
     const enrollLimit = failedAuthLimiter({ windowMs: FIFTEEN_MINUTES, maxFailures: 10, failureStatuses: [400, 401, 403] });
@@ -17,6 +18,7 @@ export class DeviceRoutes {
     router.post("/device/enroll", enrollLimit, controller.enroll);
     router.get("/me", tokenLimit, gateway.requireGateway, controller.me);
     router.post("/device/heartbeat", tokenLimit, gateway.requireGateway, controller.heartbeat);
+    router.post("/tickets/validate", tokenLimit, gateway.requireGateway, tickets.validateAccess);
     return router;
   }
 

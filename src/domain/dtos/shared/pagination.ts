@@ -28,3 +28,10 @@ export const parseSearch = (value: unknown): string | undefined => {
   const text = String(Array.isArray(value) ? value[0] : (value ?? "")).trim();
   return text ? text.slice(0, 100) : undefined;
 };
+
+export const parseActiveStatus = (value: unknown): boolean | undefined => {
+  const text = String(Array.isArray(value) ? value[0] : (value ?? "")).trim().toLowerCase();
+  if (text === "activo") return true;
+  if (text === "inactivo") return false;
+  return undefined;
+};

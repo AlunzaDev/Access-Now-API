@@ -64,6 +64,16 @@ Los dispositivos pertenecen siempre a un proyecto y se administran bajo
 terminales, la pertenencia del gateway y el ciclo de vida del token de enrolamiento; el datasource no
 expone los hashes guardados.
 
+Los eventos también pertenecen siempre a un proyecto y se administran bajo
+`/api/proyectos/:proyectoId/eventos`. Conservan fechas de inicio y fin y un mismo horario diario para todo
+el rango. La policy de horario valida formatos y orden cronológico antes de escribir en PostgreSQL.
+
+Los boletos pertenecen a un evento y al proyecto del evento. `boletos` conserva el inventario y el estado
+comercial; `boleto_credenciales` guarda SHA-256 para validar los secretos QR y una copia AES-256-GCM para
+mostrarlos nuevamente a usuarios autorizados; `boleto_eventos` es el historial inmutable. El estado de acceso se calcula con el horario y la
+zona horaria del evento. La creación bloquea el evento dentro de una transacción antes de comprobar su
+capacidad, evitando que solicitudes concurrentes la excedan.
+
 Si un servicio necesita algo que no es un repositorio (mandar un correo, guardar un archivo, cobrar), se agrega una interfaz en `domain/ports` y su implementación en `infrastructure`; `presentation/dependencies` las conecta.
 
 ## Qué se puede importar

@@ -2,7 +2,7 @@ import type { Request, Response } from "express";
 import { sessionActor } from "../../../api/middlewares/auth/auth.middleware";
 import { ErrorService } from "../../../api/middlewares/errors/error-handler";
 import type { ProjectService } from "../../../application/services/project/project.service";
-import { CreateProjectDto, parsePagination, parseSearch, UpdateProjectDto } from "../../../domain/dtos";
+import { CreateProjectDto, parseActiveStatus, parsePagination, parseSearch, UpdateProjectDto } from "../../../domain/dtos";
 import { bodyOf, queryOf, routeParam } from "../shared/route-params";
 
 export class ProjectController {
@@ -22,7 +22,10 @@ export class ProjectController {
     try {
       const query = queryOf(req);
       const access = sessionActor(req).projectAccess;
-      return res.json(await this.service.list(access, { buscar: parseSearch(query.buscar) }, parsePagination(query, 50)));
+      return res.json(await this.service.list(access, {
+        buscar: parseSearch(query.buscar),
+        estado: parseActiveStatus(query.estado),
+      }, parsePagination(query, 50)));
     } catch (error) {
       return ErrorService.handleApiError(error, res);
     }

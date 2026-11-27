@@ -5,6 +5,7 @@ import { canAccessProject, type ProjectAccess } from "../../../domain/policies/p
 import type { ProjectRepository } from "../../../domain/repository/project/project.repository";
 import type { FileStorage, FileUpload } from "../../../domain/ports/storage/file-storage.port";
 import { randomUUID } from "node:crypto";
+import type { ProjectListFilters } from "../../../domain/datasources/project/project.datasource";
 
 export class ProjectService {
   constructor(private readonly projects: ProjectRepository, private readonly storage: FileStorage) {}
@@ -25,7 +26,7 @@ export class ProjectService {
   }
 
   /** A super admin lists every project; an admin only its own (active) ones. */
-  list(access: ProjectAccess, filters: { buscar?: string }, page: PageRequest): Promise<Page<ProjectEntity>> {
+  list(access: ProjectAccess, filters: Omit<ProjectListFilters, "ids">, page: PageRequest): Promise<Page<ProjectEntity>> {
     return this.projects.list({ ...filters, ids: access.all ? undefined : access.allowed }, page);
   }
 

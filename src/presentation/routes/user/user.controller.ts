@@ -2,7 +2,7 @@ import type { Request, Response } from "express";
 import { sessionActor } from "../../../api/middlewares/auth/auth.middleware";
 import { ErrorService } from "../../../api/middlewares/errors/error-handler";
 import type { UserService } from "../../../application/services/user/user.service";
-import { CreateUserDto, parsePagination, parseSearch, UpdateUserDto } from "../../../domain/dtos";
+import { CreateUserDto, parseActiveStatus, parsePagination, parseSearch, UpdateUserDto } from "../../../domain/dtos";
 import { bodyOf, queryOf, routeParam } from "../shared/route-params";
 
 export class UserController {
@@ -21,7 +21,10 @@ export class UserController {
   list = async (req: Request, res: Response) => {
     try {
       const query = queryOf(req);
-      return res.json(await this.userService.list(sessionActor(req), { buscar: parseSearch(query.buscar) }, parsePagination(query)));
+      return res.json(await this.userService.list(sessionActor(req), {
+        buscar: parseSearch(query.buscar),
+        estado: parseActiveStatus(query.estado),
+      }, parsePagination(query)));
     } catch (error) {
       return ErrorService.handleApiError(error, res);
     }

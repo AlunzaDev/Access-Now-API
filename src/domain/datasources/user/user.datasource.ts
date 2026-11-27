@@ -11,7 +11,7 @@ export type UserChanges = Partial<
 };
 
 /** `proyectoIds` lists only the users in any of those projects (an admin's); undefined lists all. */
-export type UserListFilters = { buscar?: string; proyectoIds?: string[] };
+export type UserListFilters = { buscar?: string; proyectoIds?: string[]; estado?: boolean };
 
 export interface UserDatasource {
   create(user: NewUser): Promise<UserEntity>;

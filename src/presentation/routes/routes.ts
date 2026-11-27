@@ -8,6 +8,8 @@ import { ProjectRoutes } from "./project/project.routes";
 import { PermissionProfileRoutes } from "./permission-profile/permission-profile.routes";
 import { UserRoutes } from "./user/user.routes";
 import { DeviceRoutes } from "./device/device.routes";
+import { EventRoutes } from "./event/event.routes";
+import { TicketRoutes } from "./ticket/ticket.routes";
 
 /** Every route under /api. Paths are API contract, in Spanish (docs/convencion-nombres.md). */
 export class AppRoutes {
@@ -26,6 +28,8 @@ export class AppRoutes {
     router.use("/api/usuarios", UserRoutes.routes(auth));
     router.use("/api/perfiles-permisos", PermissionProfileRoutes.routes(auth));
     router.use("/api/proyectos/:proyectoId/dispositivos", DeviceRoutes.routes(auth));
+    router.use("/api/proyectos/:proyectoId/eventos", EventRoutes.routes(auth));
+    router.use("/api/proyectos/:proyectoId/boletos", TicketRoutes.routes(auth));
     router.use("/api/proyectos", ProjectRoutes.routes(auth));
 
     router.use("/api", ErrorService.notFound);

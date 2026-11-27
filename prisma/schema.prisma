@@ -90,6 +90,33 @@ enum DeviceCommandStatus {
   @@map("estado_comando_dispositivo")
 }
 
+enum TicketSaleStatus {
+  DISPONIBLE
+  RESERVADO
+  VENDIDO
+  CANCELADO
+  REEMBOLSADO
+
+  @@map("estado_venta_boleto")
+}
+
+enum TicketEventType {
+  GENERADO
+  ASIGNADO
+  RESERVADO
+  VENDIDO
+  REASIGNADO
+  VALIDADO
+  ACCESO_CONCEDIDO
+  ACCESO_RECHAZADO
+  CANCELADO
+  REEMBOLSADO
+  QR_REEMITIDO
+  QR_CONSULTADO
+
+  @@map("tipo_evento_boleto")
+}
+
 model Role {
   /// Stable code used by the API, e.g. SUPER_ROLE.
   code        String   @id
@@ -180,8 +207,98 @@ model Project {
 
   users   UserProject[]
   devices Device[]
+  events  Event[]
+  tickets Ticket[]
 
   @@map("proyectos")
+}
+
+model Event {
+  id                    String   @id @default(uuid(7)) @db.Uuid
+  projectId             String   @map("proyecto_id") @db.Uuid
+  nombre                String
+  descripcion           String   @default("")
+  img                   String   @default("")
+  fechaInicio           DateTime @map("fecha_inicio") @db.Date
+  fechaFin              DateTime @map("fecha_fin") @db.Date
+  horaInicio            String   @map("hora_inicio")
+  horaFin               String   @map("hora_fin")
+  capacidad             Int?
+  zonaHoraria           String   @default("America/Mexico_City") @map("zona_horaria")
+  estado                Boolean  @default(true)
+  createdAt             DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt             DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  creadoPorId           String?  @map("creado_por_id") @db.Uuid
+  creadoPorNombre       String   @default("Sistema") @map("creado_por_nombre")
+  actualizadoPorId      String?  @map("actualizado_por_id") @db.Uuid
+  actualizadoPorNombre  String   @default("Sistema") @map("actualizado_por_nombre")
+
+  project Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  tickets Ticket[]
+
+  @@index([projectId, fechaInicio])
+  @@map("eventos")
+}
+
+model Ticket {
+  id                    String           @id @default(uuid(7)) @db.Uuid
+  projectId             String           @map("proyecto_id") @db.Uuid
+  eventId               String           @map("evento_id") @db.Uuid
+  folio                 String           @unique
+  estadoVenta           TicketSaleStatus @default(DISPONIBLE) @map("estado_venta")
+  titularNombre         String           @default("") @map("titular_nombre")
+  titularCorreo         String           @default("") @map("titular_correo")
+  titularTelefono       String           @default("") @map("titular_telefono")
+  usadoEn               DateTime?        @map("usado_en") @db.Timestamptz(3)
+  canceladoEn           DateTime?        @map("cancelado_en") @db.Timestamptz(3)
+  createdAt             DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt             DateTime         @updatedAt @map("updated_at") @db.Timestamptz(3)
+  creadoPorId           String?          @map("creado_por_id") @db.Uuid
+  creadoPorNombre       String           @default("Sistema") @map("creado_por_nombre")
+  actualizadoPorId      String?          @map("actualizado_por_id") @db.Uuid
+  actualizadoPorNombre  String           @default("Sistema") @map("actualizado_por_nombre")
+
+  project     Project            @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  /// NoAction: an event with tickets is deactivated, never deleted (its tickets keep their history).
+  event       Event              @relation(fields: [eventId], references: [id], onDelete: NoAction)
+  credentials TicketCredential[]
+  history     TicketEvent[]
+
+  @@index([projectId, eventId, estadoVenta])
+  @@index([eventId, createdAt])
+  @@map("boletos")
+}
+
+model TicketCredential {
+  id          String    @id @default(uuid(7)) @db.Uuid
+  ticketId    String    @map("boleto_id") @db.Uuid
+  tokenHash   String    @unique @map("token_hash")
+  tokenCiphertext String? @map("token_ciphertext")
+  tokenIv         String? @map("token_iv")
+  tokenTag        String? @map("token_tag")
+  emitidoEn   DateTime  @default(now()) @map("emitido_en") @db.Timestamptz(3)
+  revocadoEn  DateTime? @map("revocado_en") @db.Timestamptz(3)
+
+  ticket Ticket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  @@index([ticketId, emitidoEn])
+  @@map("boleto_credenciales")
+}
+
+model TicketEvent {
+  id          String          @id @default(uuid(7)) @db.Uuid
+  ticketId    String          @map("boleto_id") @db.Uuid
+  terminalId  String?         @map("terminal_id") @db.Uuid
+  tipo        TicketEventType
+  detalle     Json            @default("{}")
+  createdAt   DateTime        @default(now()) @map("created_at") @db.Timestamptz(3)
+  actorId     String?         @map("actor_id") @db.Uuid
+  actorNombre String          @default("Sistema") @map("actor_nombre")
+
+  ticket Ticket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  @@index([ticketId, createdAt])
+  @@map("boleto_eventos")
 }
 
 model Device {

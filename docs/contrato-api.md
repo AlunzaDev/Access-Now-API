@@ -55,6 +55,7 @@ Todos los listados usan la misma convención:
 
 - Query: `desde` (offset, base 0, por defecto 0) y `limite` (por defecto 10; 50 en perfiles; máximo 100).
 - Filtro de texto opcional: `buscar`.
+- Los listados de usuarios, proyectos, perfiles y eventos aceptan `estado=activo|inactivo`; omitirlo muestra ambos.
 - Respuesta `200`: `{ "items": [...], "total": n }`, donde `total` es el número de registros que cumplen el filtro (no solo los de la página).
 - Una lista vacía responde `200` con `{ "items": [], "total": 0 }`, nunca `404`.
 - Valores inválidos se corrigen (negativos a 0, no numéricos al valor por defecto, más de 100 a 100).
@@ -80,6 +81,11 @@ El frontend valida lo mismo antes de enviar; el backend es la fuente de verdad.
 | Clave de proyecto | Única; se guarda en mayúsculas, sin acentos y con guiones (`"Estadio gdl"` → `ESTADIO-GDL`), máximo 40 |
 | Ubicación de proyecto | `latitud` y `longitud` se envían ambas o ninguna; aceptan `null` para quitarla; rangos -90..90 y -180..180 |
 | Imagen de proyecto | Multipart campo `imagen`; JPG, PNG o WebP; máximo 5 MB |
+| Capacidad de evento | Entero positivo opcional. `null` significa sin límite; no puede reducirse por debajo de los boletos activos |
+| Zona horaria de evento | Nombre IANA válido, por defecto `America/Mexico_City` |
+| Estado comercial de boleto | `DISPONIBLE`, `RESERVADO`, `VENDIDO`, `CANCELADO` o `REEMBOLSADO`. Por edición solo `DISPONIBLE` ↔ `RESERVADO` → `VENDIDO`; un vendido no vuelve a disponible (se cancela). Un boleto usado o anulado ya no se edita (`409`) |
+| Estado de acceso de boleto | Calculado, no guardado: `VIGENTE`, `USADO`, `ANULADO`, `EVENTO_INACTIVO`, `NO_VENDIDO`, `NO_VIGENTE` (antes del inicio) o `NO_UTILIZADO` (ya terminó) |
+| QR de boleto | Token opaco `AN1.<base64url>` de 32 bytes aleatorios. SHA-256 se usa para validarlo y AES-256-GCM para recuperarlo con autorización; nunca aparece en listados |
 | MAC de dispositivo | Se normaliza como `AA:BB:CC:DD:EE:FF`; única dentro del proyecto; opcional solo para gateways |
 | IPv4 de dispositivo | Cuatro octetos decimales entre 0 y 255 |
 | Terminal | Requiere `gatewayId`, `mac` y `sentido`: `ENTRADA`, `SALIDA` o `BIDIRECCIONAL`; `carril` es opcional |
@@ -91,6 +97,14 @@ El frontend valida lo mismo antes de enviar; el backend es la fuente de verdad.
 | Método y ruta | Quién | Respuesta |
 |---|---|---|
 | `GET /ping`, `GET /health` | Público | Estado del servicio y de la base |
+| `GET /proyectos/:proyectoId/boletos` | Módulo `tickets` y acceso al proyecto | `{ items, total }`; filtros `eventoId`, `estadoVenta`, `buscar`, `desde`, `limite`. Nunca incluye tokens |
+| `POST /proyectos/:proyectoId/boletos` | Módulo `tickets` y acceso al proyecto | Boleto (`201`) y `token` visible una vez. Requiere `eventoId`; titular y estado comercial son opcionales. Evento inactivo o sin cupo → `409` |
+| `POST /proyectos/:proyectoId/boletos/lote` | Módulo `tickets` y acceso al proyecto | `{ items, total }` (`201`), cada elemento con token visible una vez. `cantidad` de 1 a 1000 |
+| `GET/PATCH /proyectos/:proyectoId/boletos/:id` | Módulo `tickets` y acceso al proyecto | Detalle con historial / boleto actualizado. Otro proyecto responde `404` |
+| `POST /proyectos/:proyectoId/boletos/:id/reemitir-qr` | Módulo `tickets` y acceso al proyecto | Revoca la credencial anterior y responde el token nuevo una sola vez |
+| `GET /proyectos/:proyectoId/boletos/:id/qr` | Módulo `tickets` y acceso al proyecto | Devuelve el QR activo y registra `QR_CONSULTADO`. Un boleto antiguo sin copia cifrada debe reemitirse una vez |
+| `DELETE /proyectos/:proyectoId/boletos/:id` | Módulo `tickets` y acceso al proyecto | Cancela el boleto, revoca su QR y libera capacidad; no elimina su auditoría. Ya cancelado o ya usado → `409` |
+| `POST /v1/tickets/validate` | Gateway (token operativo y `X-Device-Fingerprint`) | Cuerpo `{ token, terminalMac? }`. Consume atómicamente un boleto vendido, vigente y de un evento activo del proyecto del gateway. Siempre `200` con `{ acceso: "CONCEDIDO"\|"RECHAZADO", message, boleto }`: un QR desconocido, cancelado o de otro proyecto es `RECHAZADO` con `boleto: null`. `boleto` trae solo `{ id, folio, eventoNombre, titularNombre, estadoAcceso, usadoEn }` (nunca correo ni teléfono). El intento queda en el historial con el gateway y la terminal (por MAC) |
 | `POST /auth/login` | Público | `{ token, usuario }`. Cuerpo `{ correo, password }` |
 | `GET /auth/renew` | Sesión | `{ token, usuario }` actualizados |
 | `POST /auth/forgot-password` | Público | `{ message }`, igual exista o no la cuenta |
@@ -115,6 +129,9 @@ El frontend valida lo mismo antes de enviar; el backend es la fuente de verdad.
 | `POST /proyectos/:proyectoId/dispositivos` | Módulo `scanners` y acceso al proyecto | Dispositivo creado (`201`). Una terminal activa encola `CONFIGURAR_TERMINAL` y queda `configEstado: PENDIENTE` |
 | `GET/PATCH/DELETE /proyectos/:proyectoId/dispositivos/:id` | Módulo `scanners` y acceso al proyecto | Dispositivo; otro proyecto responde `404`. En terminales: cambio de IP, carril o sentido, o reactivación → `CONFIGURAR_TERMINAL`; desactivar o borrar → `ELIMINAR_TERMINAL`; cambio de gateway o de MAC → ambos. Renombrar no encola nada |
 | `POST /proyectos/:proyectoId/dispositivos/:id/token-enrolamiento` | Módulo `scanners` y acceso al proyecto | Solo gateway; recibe vigencia de 1/24/168 horas y enrolamiento de 30/90 días o sin vencimiento; token visible una vez |
+| `GET/POST /proyectos/:proyectoId/eventos` | Módulo `events` y acceso al proyecto | Lista paginada o crea un evento con fechas `YYYY-MM-DD` y horas `HH:mm` |
+| `GET/PATCH/DELETE /proyectos/:proyectoId/eventos/:id` | Módulo `events` y acceso al proyecto | Consulta, actualiza o elimina un evento del proyecto; otro proyecto responde `404`. Un evento con boletos no se elimina (`409`): se desactiva, y desactivado no deja entrar ni genera boletos |
+| `PUT/DELETE /proyectos/:proyectoId/eventos/:id/imagen` | Módulo `events` y acceso al proyecto | Sube, reemplaza o elimina la foto; multipart `imagen`, JPG/PNG/WebP, máximo 5 MB |
 | `POST /proyectos/:proyectoId/dispositivos/:id/revocar-enrolamiento` | Módulo `scanners` y acceso al proyecto | Solo gateway. Invalida el token operativo y cualquier token de enrolamiento sin usar; el gateway sigue registrado y activo (`enrolado: false`). Evento `REVOCADO`. `409` si no está enrolado ni tiene token vigente |
 | `GET /proyectos/:proyectoId/dispositivos/:id/estado` | Módulo `scanners` y acceso al proyecto | `{ tipo, enLinea, ultimaConexion, umbralFueraDeLineaMs, enrolamiento, configEstado, configError, gateway }`. En línea solo con un heartbeat dentro del umbral (`DEVICE_OFFLINE_AFTER_MS`, 180 s por defecto); una terminal, solo si su gateway está en línea y la reporta |
 | `GET /proyectos/:proyectoId/dispositivos/:id/historial` | Módulo `scanners` y acceso al proyecto | `{ items, total }` (`desde`, `limite`), más reciente primero. Eventos inmutables: `TOKEN_GENERADO`, `ENROLADO`, `REENROLADO`, `CONECTADO`, `DESCONECTADO`, `ENROLAMIENTO_VENCIDO`, `ERROR`, `TERMINAL_DETECTADA`, `ALERTA_SEGURIDAD`, `REVOCADO`, con `detalle`, `creadoEn` y `actor` |

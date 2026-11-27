@@ -13,6 +13,10 @@ import { DeviceCommandPostgresDatasource } from
   "../../../infrastructure/datasources/device-command/device-command.datasource.postgres";
 import { DeviceCommandRepositoryImpl } from
   "../../../infrastructure/repositories/device-command/device-command.repository.impl";
+import { EventPostgresDatasource } from "../../../infrastructure/datasources/event/event.datasource.postgres";
+import { EventRepositoryImpl } from "../../../infrastructure/repositories/event/event.repository.impl";
+import { TicketPostgresDatasource } from "../../../infrastructure/datasources/ticket/ticket.datasource.postgres";
+import { TicketRepositoryImpl } from "../../../infrastructure/repositories/ticket/ticket.repository.impl";
 
 export const buildUserRepository = () => new UserRepositoryImpl(new UserPostgresDatasource());
 
@@ -25,3 +29,6 @@ export const buildDeviceRepository = () => new DeviceRepositoryImpl(new DevicePo
 
 export const buildDeviceCommandRepository = () =>
   new DeviceCommandRepositoryImpl(new DeviceCommandPostgresDatasource());
+
+export const buildEventRepository = () => new EventRepositoryImpl(new EventPostgresDatasource());
+export const buildTicketRepository = () => new TicketRepositoryImpl(new TicketPostgresDatasource());

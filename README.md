@@ -23,6 +23,10 @@ Las imágenes de proyectos se guardan en `public/uploads` durante desarrollo. Pa
 configura `SPACES_KEY`, `SPACES_SECRET`, `SPACES_BUCKET`, `SPACES_REGION` y `SPACES_ENDPOINT`; opcionalmente,
 `SPACES_CDN_URL` define la URL pública. Si falta algún valor requerido, se usa almacenamiento local.
 
+`TICKET_QR_ENCRYPTION_KEY` cifra con AES-256-GCM la copia recuperable de cada QR. Debe ser un secreto
+estable de al menos 32 caracteres en producción: cambiarlo obliga a reemitir los QR existentes. Si se
+omite durante desarrollo, se usa `JWT_SEED` como compatibilidad local.
+
 ## Calidad
 
 ```bash

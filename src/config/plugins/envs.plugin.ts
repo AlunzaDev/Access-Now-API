@@ -39,6 +39,8 @@ const parseBoundedInteger = (
 };
 
 const jwtSeed = env.get("JWT_SEED").required().asString().trim();
+// Its own key: rotating JWT_SEED (sessions) must never make issued QR codes unrecoverable.
+const ticketQrEncryptionKey = env.get("TICKET_QR_ENCRYPTION_KEY").default(isProd ? "" : jwtSeed).asString().trim();
 const mailerEmail = env.get("MAILER_EMAIL").default("").asString().trim();
 const mailerSecretKey = env.get("MAILER_SECRET_KEY").default("").asString().trim();
 const mailerHost = env.get("MAILER_HOST").default("").asString().trim();
@@ -61,6 +63,12 @@ if (isProd) {
   }
   if (jwtSeed.length < 32) {
     throw new Error("JWT_SEED must contain at least 32 characters in production.");
+  }
+  if (ticketQrEncryptionKey.length < 32) {
+    throw new Error("TICKET_QR_ENCRYPTION_KEY must contain at least 32 characters in production.");
+  }
+  if (ticketQrEncryptionKey === jwtSeed) {
+    throw new Error("TICKET_QR_ENCRYPTION_KEY must be different from JWT_SEED in production.");
   }
   if (!mailerEmail || !mailerSecretKey || !mailerHost) {
     throw new Error("MAILER_EMAIL, MAILER_SECRET_KEY and MAILER_HOST are required in production.");
@@ -89,6 +97,7 @@ export const envs = {
   AUTH_LOGIN_MAX_FAILURES: parseBoundedInteger(env.get("AUTH_LOGIN_MAX_FAILURES").asString(), 5, 1, 1000),
   AUTH_LOGIN_IP_MAX_FAILURES: parseBoundedInteger(env.get("AUTH_LOGIN_IP_MAX_FAILURES").asString(), 20, 1, 10000),
   JWT_SEED: jwtSeed,
+  TICKET_QR_ENCRYPTION_KEY: ticketQrEncryptionKey,
   DATABASE_URL: databaseUrl,
   DATABASE_POOL_MAX: parseBoundedInteger(env.get("DATABASE_POOL_MAX").asString(), 10, 1, 100),
   MAILER_EMAIL: mailerEmail,
