@@ -28,6 +28,8 @@ enum UserModule {
   tickets
   scanners
   orders
+  /// Not a section: lets the profile see the immutable history of tickets and devices.
+  history
 
   @@map("user_module")
 }

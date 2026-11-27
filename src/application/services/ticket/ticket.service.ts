@@ -58,15 +58,22 @@ export class TicketService {
 
   list(filters: TicketListFilters, page: PageRequest) { return this.tickets.list(filters, page); }
 
-  async getById(projectId: string, id: string) {
-    const ticket = await this.tickets.findById(projectId, id);
-    if (!ticket) throw CustomError.notFound("Boleto no encontrado");
+  /** The ticket; its history only for who may see it (permission "Ver historial"). */
+  async getById(projectId: string, id: string, withHistory = false) {
+    const ticket = await this.find(projectId, id);
+    if (!withHistory) return ticket;
     const history = await this.tickets.history(projectId, id);
     return new TicketEntity({ ...ticket.values, historial: history ?? [] });
   }
 
+  private async find(projectId: string, id: string) {
+    const ticket = await this.tickets.findById(projectId, id);
+    if (!ticket) throw CustomError.notFound("Boleto no encontrado");
+    return ticket;
+  }
+
   async update(projectId: string, id: string, dto: UpdateTicketDto) {
-    const current = await this.getById(projectId, id);
+    const current = await this.find(projectId, id);
     const error = canChangeTicket(current.values, dto.values.estadoVenta);
     if (error) throw CustomError.conflict(error);
     const ticket = await this.tickets.update(projectId, id, dto.values);
@@ -85,7 +92,7 @@ export class TicketService {
   }
 
   async reissue(projectId: string, id: string) {
-    const current = await this.getById(projectId, id);
+    const current = await this.find(projectId, id);
     if (["CANCELADO", "REEMBOLSADO"].includes(current.values.estadoVenta) ||
         current.values.estadoAcceso === "USADO") {
       throw CustomError.conflict("No se puede reemitir el QR de un boleto anulado o utilizado");
@@ -102,7 +109,7 @@ export class TicketService {
   }
 
   async getQr(projectId: string, id: string) {
-    const ticket = await this.getById(projectId, id);
+    const ticket = await this.find(projectId, id);
     if (["CANCELADO", "REEMBOLSADO"].includes(ticket.values.estadoVenta)) {
       throw CustomError.conflict("No se puede consultar el QR de un boleto anulado");
     }

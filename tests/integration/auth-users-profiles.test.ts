@@ -77,7 +77,7 @@ describe("auth, usuarios y perfiles", () => {
     const { status, body } = await login("super");
     expect(status).toBe(200);
     expect(body.usuario.rol).toBe("SUPER_ROLE");
-    expect(body.usuario.modules).toEqual(["users", "permissionProfiles", "projects", "events", "tickets", "scanners", "orders"]);
+    expect(body.usuario.modules).toEqual(["users", "permissionProfiles", "projects", "events", "tickets", "scanners", "orders", "history"]);
     expect(body.usuario.password).toBeUndefined();
     superToken = body.token;
 

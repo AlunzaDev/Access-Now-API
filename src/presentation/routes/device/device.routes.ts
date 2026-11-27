@@ -38,7 +38,7 @@ export class DeviceRoutes {
     router.post("/:id/token-enrolamiento", controller.createEnrollmentToken);
     router.post("/:id/revocar-enrolamiento", controller.revokeEnrollment);
     router.get("/:id/estado", controller.status);
-    router.get("/:id/historial", controller.history);
+    router.get("/:id/historial", auth.requireModules("history"), controller.history);
     router.get("/:id/comandos", controller.commands);
     router.post("/:id/sincronizar", controller.sync);
     router.post("/:id/comandos/:comandoId/cancelar", controller.cancelCommand);

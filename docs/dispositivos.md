@@ -127,7 +127,8 @@ stateDiagram-v2
 
 ## 7. Historial del gateway y de la terminal
 
-Solo se agregan entradas, con quién y cuándo:
+Solo se agregan entradas, con quién y cuándo. Lo ve únicamente quien tiene el permiso **"Ver historial"**
+(módulo `history`); sin él, la API responde `403`.
 
 | Tipo | Cuándo |
 |---|---|

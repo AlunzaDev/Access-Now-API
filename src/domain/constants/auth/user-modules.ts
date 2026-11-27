@@ -1,4 +1,7 @@
-/** Dashboard sections a permission profile can open. Keep in sync with `enum UserModule`. */
+/**
+ * What a permission profile can open. Keep in sync with `enum UserModule`. Most are dashboard
+ * sections; `history` is a capability: seeing the immutable history of tickets and devices.
+ */
 export const USER_MODULES = [
   "users",
   "permissionProfiles",
@@ -7,6 +10,7 @@ export const USER_MODULES = [
   "tickets",
   "scanners",
   "orders",
+  "history",
 ] as const;
 
 export type UserModuleAccess = (typeof USER_MODULES)[number];

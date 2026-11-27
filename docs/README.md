@@ -28,7 +28,8 @@ flowchart LR
 ```
 
 - **Usuarios y permisos:** cada usuario tiene un perfil de permisos (qué módulos ve: usuarios, proyectos,
-  eventos, boletos, dispositivos...) y acceso a ciertos proyectos. Un super administrador ve todo.
+  eventos, boletos, dispositivos...) y acceso a ciertos proyectos. Un super administrador ve todo. El permiso
+  **"Ver historial"** no es una sección: decide quién ve el historial de boletos y dispositivos.
 - **Proyecto:** el recinto o cliente. Sus eventos, boletos y dispositivos solo los ve quien tiene acceso a él.
 - **Evento → boletos:** ver [boletos.md](boletos.md).
 - **Gateway → terminales:** ver [dispositivos.md](dispositivos.md).

@@ -1,4 +1,6 @@
 import type { Request, Response } from "express";
+import { sessionUser } from "../../../api/middlewares/auth/auth.middleware";
+import { canOpenModule } from "../../../domain/policies/auth/session-policy";
 import { ErrorService } from "../../../api/middlewares/errors/error-handler";
 import type { TicketService } from "../../../application/services/ticket/ticket.service";
 import { normalizeMac } from "../../../domain/policies/device/device-policy";
@@ -48,7 +50,10 @@ export class TicketController {
   };
 
   getById = async (request: Request, response: Response) => {
-    try { return response.json(await this.service.getById(routeParam(request, "proyectoId"), routeParam(request, "id"))); }
+    try {
+      const withHistory = canOpenModule(sessionUser(request), "history");
+      return response.json(await this.service.getById(routeParam(request, "proyectoId"), routeParam(request, "id"), withHistory));
+    }
     catch (error) { return ErrorService.handleApiError(error, response); }
   };
 

@@ -165,7 +165,8 @@ Si Access Now no responde a tiempo, SCAT decide con su **catálogo local**:
 ## 6. Historial del boleto
 
 Cada boleto tiene un historial **que no se puede editar ni borrar**: solo se agregan entradas, con quién
-y cuándo. Lo que hace un gateway aparece a su nombre (por ejemplo "Gateway Puerta 1"); lo automático,
+y cuándo. **Solo lo ve quien tiene el permiso "Ver historial"** (módulo `history` del perfil): sin él, la
+API no lo envía y el dashboard no muestra la pestaña. Lo que hace un gateway aparece a su nombre (por ejemplo "Gateway Puerta 1"); lo automático,
 como "Sistema".
 
 | Tipo | Cuándo |
