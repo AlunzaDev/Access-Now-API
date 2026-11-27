@@ -16,11 +16,16 @@ const PASSWORD = "Secreta123";
 let server: Server;
 let baseUrl = "";
 
-const call = async (method: string, path: string, { body, token }: { body?: unknown; token?: string } = {}) => {
+const call = async (
+  method: string,
+  path: string,
+  { body, token, fingerprint }: { body?: unknown; token?: string; fingerprint?: string } = {},
+) => {
   const response = await fetch(`${baseUrl}/api${path}`, {
     method,
     headers: {
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(fingerprint ? { "X-Device-Fingerprint": fingerprint } : {}),
       ...(body ? { "Content-Type": "application/json" } : {}),
     },
     body: body ? JSON.stringify(body) : undefined,
@@ -32,7 +37,8 @@ describe("cola de comandos por heartbeat y terminales por MAC", () => {
   const ids = { project: "", gateway: "", terminal: "" };
   const tokens = { user: "", gateway: "" };
   const devices = () => `/proyectos/${ids.project}/dispositivos`;
-  const beat = (body: Json = {}) => call("POST", "/v1/device/heartbeat", { token: tokens.gateway, body });
+  const beat = (body: Json = {}) =>
+    call("POST", "/v1/device/heartbeat", { token: tokens.gateway, fingerprint: `fp-${tag}`, body });
   const terminalRow = (id = ids.terminal) => db().device.findUniqueOrThrow({ where: { id } });
 
   beforeAll(async () => {

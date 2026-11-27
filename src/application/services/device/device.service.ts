@@ -126,7 +126,9 @@ export class DeviceService {
   async status(projectId: string, id: string): Promise<DeviceStatus> {
     const device = await this.findDevice(projectId, id);
     const now = Date.now();
-    const online = (target: DeviceEntity) => isOnline(target.ultimaConexion, now, this.offlineAfterMs);
+    // Without an enrollment nothing can authenticate it, whatever its last heartbeat says.
+    const online = (target: DeviceEntity) =>
+      target.enrolado && isOnline(target.ultimaConexion, now, this.offlineAfterMs);
 
     if (device.tipo === "GATEWAY") {
       const dates = await this.devices.findEnrollmentDates(device.id);
@@ -162,6 +164,23 @@ export class DeviceService {
   async history(projectId: string, id: string, page: PageRequest): Promise<Page<DeviceEvent>> {
     await this.findDevice(projectId, id);
     return this.devices.listEvents(id, page);
+  }
+
+  /**
+   * Cuts a gateway's access without deleting or deactivating it: its operational token and any
+   * unused enrollment token stop working. It must enroll again with a new token.
+   */
+  async revokeEnrollment(projectId: string, id: string): Promise<DeviceEntity> {
+    const device = await this.findDevice(projectId, id);
+    if (device.tipo !== "GATEWAY") throw CustomError.badRequest("Solo se puede revocar el enrolamiento de un gateway");
+    const stored = await this.devices.findEnrollmentData(device.id);
+    const pendingToken = Boolean(stored?.tokenExpiresAt && stored.tokenExpiresAt.getTime() > Date.now());
+    if (!device.enrolado && !pendingToken) {
+      throw CustomError.conflict("El gateway no está enrolado ni tiene un token de enrolamiento vigente");
+    }
+    await this.devices.revokeEnrollment(device.id);
+    await this.devices.addEvent(device.id, "REVOCADO", { estabaEnrolado: device.enrolado, tokenPendiente: pendingToken });
+    return this.findDevice(projectId, id);
   }
 
   /** Gateway: SINCRONIZAR with all its active terminals. Terminal: configure it again. */

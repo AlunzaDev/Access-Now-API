@@ -1,5 +1,8 @@
 import { Router } from "express";
 import type { AuthMiddleware, GatewayAuthMiddleware } from "../../../api/middlewares";
+import { failedAuthLimiter } from "../../../api/middlewares/rate-limit/rate-limit.middleware";
+
+const FIFTEEN_MINUTES = 15 * 60 * 1000;
 import { buildDeviceController } from "../../dependencies";
 
 export class DeviceRoutes {
@@ -7,9 +10,13 @@ export class DeviceRoutes {
   static enrollment(gateway: GatewayAuthMiddleware): Router {
     const router = Router();
     const controller = buildDeviceController();
-    router.post("/device/enroll", controller.enroll);
-    router.get("/me", gateway.requireGateway, controller.me);
-    router.post("/device/heartbeat", gateway.requireGateway, controller.heartbeat);
+    // Guessing is pointless (256-bit tokens), but failed attempts are capped per address so
+    // nobody can hammer the gateway API. Valid calls never count.
+    const enrollLimit = failedAuthLimiter({ windowMs: FIFTEEN_MINUTES, maxFailures: 10, failureStatuses: [400, 401, 403] });
+    const tokenLimit = failedAuthLimiter({ windowMs: FIFTEEN_MINUTES, maxFailures: 20 });
+    router.post("/device/enroll", enrollLimit, controller.enroll);
+    router.get("/me", tokenLimit, gateway.requireGateway, controller.me);
+    router.post("/device/heartbeat", tokenLimit, gateway.requireGateway, controller.heartbeat);
     return router;
   }
 
@@ -24,6 +31,7 @@ export class DeviceRoutes {
     router.patch("/:id", controller.update);
     router.delete("/:id", controller.delete);
     router.post("/:id/token-enrolamiento", controller.createEnrollmentToken);
+    router.post("/:id/revocar-enrolamiento", controller.revokeEnrollment);
     router.get("/:id/estado", controller.status);
     router.get("/:id/historial", controller.history);
     router.get("/:id/comandos", controller.commands);

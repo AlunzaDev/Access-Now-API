@@ -57,6 +57,8 @@ enum DeviceEventType {
   ENROLAMIENTO_VENCIDO
   ERROR
   TERMINAL_DETECTADA
+  ALERTA_SEGURIDAD
+  REVOCADO
 
   @@map("tipo_evento_dispositivo")
 }
@@ -201,6 +203,8 @@ model Device {
   ultimaConexion           DateTime?          @map("ultima_conexion") @db.Timestamptz(3)
   /// Last known presence, switched by heartbeats and the presence monitor (drives CONECTADO/DESCONECTADO events).
   enLinea                  Boolean            @default(false) @map("en_linea")
+  /// Address the gateway's last heartbeat came from (detects the same token used from two places).
+  ultimaIpOrigen           String?            @map("ultima_ip_origen")
   enrollmentTokenHash      String?            @map("enrollment_token_hash")
   enrollmentTokenExpiresAt DateTime?          @map("enrollment_token_expires_at") @db.Timestamptz(3)
   enrollmentDurationDays   Int?               @map("enrollment_duration_days")

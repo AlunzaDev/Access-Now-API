@@ -31,6 +31,8 @@ export class DeviceRepositoryImpl implements DeviceRepository {
   markTerminalsOffline: DeviceRepository["markTerminalsOffline"] = (...args) =>
     this.datasource.markTerminalsOffline(...args);
   setConfigStatus: DeviceRepository["setConfigStatus"] = (...args) => this.datasource.setConfigStatus(...args);
+  lastEventAt: DeviceRepository["lastEventAt"] = (...args) => this.datasource.lastEventAt(...args);
+  revokeEnrollment: DeviceRepository["revokeEnrollment"] = (...args) => this.datasource.revokeEnrollment(...args);
   addEvent: DeviceRepository["addEvent"] = (...args) => this.datasource.addEvent(...args);
   listEvents: DeviceRepository["listEvents"] = (...args) => this.datasource.listEvents(...args);
 }

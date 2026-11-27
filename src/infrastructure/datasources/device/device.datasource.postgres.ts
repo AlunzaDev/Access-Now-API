@@ -4,6 +4,7 @@ import type {
   GatewayCredentials,
   HeartbeatData,
   NewDevice,
+  PreviousHeartbeat,
   TerminalReport,
 } from "../../../domain/datasources/device/device.datasource";
 import type { DeviceValues } from "../../../domain/dtos/device/device-fields";
@@ -232,14 +233,48 @@ export class DevicePostgresDatasource implements DeviceDatasource {
     return row ? { enrolledAt: row.enrolledAt, expiresAt: row.enrollmentExpiresAt } : null;
   }
 
-  async recordHeartbeat(id: string, { at, version, ip }: HeartbeatData): Promise<{ wasOnline: boolean }> {
+  async recordHeartbeat(id: string, { at, version, ip, sourceIp }: HeartbeatData): Promise<PreviousHeartbeat> {
     return PostgresDatabase.client.$transaction(async (tx) => {
-      const current = await tx.device.findUniqueOrThrow({ where: { id }, select: { enLinea: true } });
+      const current = await tx.device.findUniqueOrThrow({
+        where: { id },
+        select: { enLinea: true, ultimaIpOrigen: true, ultimaConexion: true },
+      });
       await tx.device.update({
         where: { id },
-        data: { ultimaConexion: at, enLinea: true, ...(version ? { version } : {}), ...(ip ? { ip } : {}) },
+        data: {
+          ultimaConexion: at,
+          enLinea: true,
+          ultimaIpOrigen: sourceIp,
+          ...(version ? { version } : {}),
+          ...(ip ? { ip } : {}),
+        },
       });
-      return { wasOnline: current.enLinea };
+      return { wasOnline: current.enLinea, sourceIp: current.ultimaIpOrigen, seenAt: current.ultimaConexion };
+    });
+  }
+
+  async lastEventAt(deviceId: string, tipo: DeviceEventType): Promise<Date | null> {
+    const row = await PostgresDatabase.client.deviceEvent.findFirst({
+      where: { deviceId, tipo },
+      orderBy: { createdAt: "desc" },
+      select: { createdAt: true },
+    });
+    return row?.createdAt ?? null;
+  }
+
+  async revokeEnrollment(id: string): Promise<void> {
+    await this.devices.update({
+      where: { id },
+      data: {
+        deviceTokenHash: null,
+        deviceFingerprint: null,
+        enrolledAt: null,
+        enrollmentExpiresAt: null,
+        enrollmentTokenHash: null,
+        enrollmentTokenExpiresAt: null,
+        enLinea: false,
+        ultimaIpOrigen: null,
+      },
     });
   }
 

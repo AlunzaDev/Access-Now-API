@@ -28,7 +28,10 @@ export type GatewayCredentials = {
   expiresAt: Date | null;
 };
 
-export type HeartbeatData = { at: Date; version?: string; ip?: string };
+export type HeartbeatData = { at: Date; version?: string; ip?: string; sourceIp: string };
+
+/** What the gateway looked like before this heartbeat (presence and where it reported from). */
+export type PreviousHeartbeat = { wasOnline: boolean; sourceIp: string | null; seenAt: Date | null };
 
 /** What a gateway reports about one of its terminals (the physical truth of the local network). */
 export type TerminalReport = {
@@ -53,8 +56,12 @@ export interface DeviceDatasource {
   findByDeviceTokenHash(tokenHash: string): Promise<GatewayCredentials | null>;
   /** Enrollment dates of a device (for its status). */
   findEnrollmentDates(id: string): Promise<{ enrolledAt: Date | null; expiresAt: Date | null } | null>;
-  /** Saves a heartbeat and marks the gateway online; tells whether it already was. */
-  recordHeartbeat(id: string, data: HeartbeatData): Promise<{ wasOnline: boolean }>;
+  /** Saves a heartbeat and marks the gateway online; returns how it was before. */
+  recordHeartbeat(id: string, data: HeartbeatData): Promise<PreviousHeartbeat>;
+  /** When the last event of that type was recorded (for alert cooldowns). */
+  lastEventAt(deviceId: string, tipo: DeviceEventType): Promise<Date | null>;
+  /** Invalidates the operational token and any unused enrollment token; the gateway stays registered. */
+  revokeEnrollment(id: string): Promise<void>;
   /**
    * Marks offline the online gateways whose last heartbeat is older than `before`, and their
    * terminals with them (nobody can vouch for them); returns the gateway ids.

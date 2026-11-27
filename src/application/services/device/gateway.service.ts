@@ -5,6 +5,11 @@ import type { DeliveredCommand } from "../../../domain/entities/device/device-co
 import type { DeviceEntity } from "../../../domain/entities/device/device.entity";
 import { CustomError } from "../../../domain/errors/custom.error";
 import type { DeviceRepository } from "../../../domain/repository/device/device.repository";
+import {
+  canRaiseAlert,
+  fingerprintMatches,
+  isSourceConflict,
+} from "../../../domain/policies/device/gateway-access-policy";
 import type { DeviceCommandService } from "./device-command.service";
 
 export type HeartbeatAnswer = {
@@ -19,6 +24,8 @@ export type HeartbeatAnswer = {
 
 const hashToken = (token: string) => createHash("sha256").update(token).digest("hex");
 const DAY_MS = 24 * 60 * 60 * 1000;
+/** At most one security alert per gateway in this time. */
+const ALERT_COOLDOWN_MS = 10 * 60 * 1000;
 
 /** What the Raspberry keeps from its enrollment: who it is, where it belongs and how often to report. */
 export type GatewaySettings = {
@@ -39,12 +46,21 @@ export class GatewayService {
     private readonly timing: { offlineAfterMs: number; heartbeatIntervalMs: number },
   ) {}
 
-  /** The gateway behind a bearer token; 401 when unknown, deactivated or its enrollment expired. */
-  async authenticate(token: string): Promise<GatewayCredentials> {
+  /**
+   * The gateway behind a bearer token and its fingerprint. 401 when the token is unknown, the
+   * gateway is deactivated, its enrollment expired or was revoked, or the fingerprint is not the
+   * enrolled one (that last case also leaves a security alert in its history).
+   */
+  async authenticate(token: string, fingerprint: string, sourceIp: string): Promise<GatewayCredentials> {
     const credentials = token ? await this.devices.findByDeviceTokenHash(hashToken(token)) : null;
     if (!credentials || !credentials.device.estado) throw CustomError.unauthorized("Invalid token");
     if (credentials.expiresAt && credentials.expiresAt.getTime() <= Date.now()) {
       throw CustomError.unauthorized("Enrollment expired");
+    }
+    if (!fingerprint) throw CustomError.unauthorized("Device fingerprint required");
+    if (!fingerprintMatches(credentials.fingerprint, fingerprint)) {
+      await this.raiseAlert(credentials.device.id, { motivo: "HUELLA_DISTINTA", ipOrigen: sourceIp });
+      throw CustomError.unauthorized("Device fingerprint mismatch");
     }
     return credentials;
   }
@@ -107,6 +123,13 @@ export class GatewayService {
     };
   }
 
+  /** Security alert in the gateway's history, at most one per cooldown. */
+  private async raiseAlert(deviceId: string, detalle: Record<string, unknown>): Promise<void> {
+    const last = await this.devices.lastEventAt(deviceId, "ALERTA_SEGURIDAD");
+    if (!canRaiseAlert(last?.getTime() ?? null, Date.now(), ALERT_COOLDOWN_MS)) return;
+    await this.devices.addEvent(deviceId, "ALERTA_SEGURIDAD", detalle);
+  }
+
   private get intervalSeconds(): number {
     return Math.round(this.timing.heartbeatIntervalMs / 1000);
   }
@@ -115,12 +138,22 @@ export class GatewayService {
    * One heartbeat, in order: presence, results of earlier commands, terminals on the local network
    * (only when they changed), and the commands to run next.
    */
-  async heartbeat({ device }: GatewayCredentials, dto: HeartbeatDto): Promise<HeartbeatAnswer> {
-    const { wasOnline } = await this.devices.recordHeartbeat(device.id, {
-      at: new Date(),
+  async heartbeat({ device }: GatewayCredentials, dto: HeartbeatDto, sourceIp: string): Promise<HeartbeatAnswer> {
+    const now = new Date();
+    const previous = await this.devices.recordHeartbeat(device.id, {
+      at: now,
       version: dto.version,
       ip: dto.ip,
+      sourceIp,
     });
+    const { wasOnline } = previous;
+    if (isSourceConflict(previous.sourceIp, previous.seenAt?.getTime() ?? null, sourceIp, now.getTime(), this.timing.offlineAfterMs)) {
+      await this.raiseAlert(device.id, {
+        motivo: "IP_ORIGEN_SIMULTANEA",
+        ipAnterior: previous.sourceIp,
+        ipNueva: sourceIp,
+      });
+    }
     if (!wasOnline) {
       await this.devices.addEvent(device.id, "CONECTADO", {
         ip: dto.ip ?? device.ip,

@@ -17,11 +17,16 @@ const PASSWORD = "Secreta123";
 let server: Server;
 let baseUrl = "";
 
-const call = async (method: string, path: string, { body, token }: { body?: unknown; token?: string } = {}) => {
+const call = async (
+  method: string,
+  path: string,
+  { body, token, fingerprint }: { body?: unknown; token?: string; fingerprint?: string } = {},
+) => {
   const response = await fetch(`${baseUrl}/api${path}`, {
     method,
     headers: {
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(fingerprint ? { "X-Device-Fingerprint": fingerprint } : {}),
       ...(body ? { "Content-Type": "application/json" } : {}),
     },
     body: body ? JSON.stringify(body) : undefined,
@@ -33,6 +38,8 @@ describe("gateway: token operativo, heartbeat, estado e historial", () => {
   const ids = { project: "", gateway: "", terminal: "" };
   const tokens = { user: "", gateway: "" };
   const devicePath = (id: string) => `/proyectos/${ids.project}/dispositivos/${id}`;
+  /** The gateway's credentials: operational token plus the fingerprint it enrolled with. */
+  const asGateway = () => ({ token: tokens.gateway, fingerprint: `fp-${tag}` });
 
   beforeAll(async () => {
     await PostgresDatabase.connect({ databaseUrl: process.env.DATABASE_URL!, poolMax: 4 });
@@ -108,7 +115,7 @@ describe("gateway: token operativo, heartbeat, estado e historial", () => {
     };
     expect(enrolled.body.service.settings).toEqual(settings);
 
-    const me = await call("GET", "/v1/me", { token: tokens.gateway });
+    const me = await call("GET", "/v1/me", { ...asGateway() });
     expect(me.status).toBe(200);
     expect(me.body).toMatchObject({
       device: { id: ids.gateway, fingerprint: `fp-${tag}` },
@@ -116,18 +123,17 @@ describe("gateway: token operativo, heartbeat, estado e historial", () => {
     });
 
     expect((await call("GET", "/v1/me")).status).toBe(401);
-    expect((await call("GET", "/v1/me", { token: "a".repeat(64) })).status).toBe(401);
+    expect((await call("GET", "/v1/me", { token: "a".repeat(64), fingerprint: `fp-${tag}` })).status).toBe(401);
     // A dashboard session token is not a gateway token.
-    expect((await call("GET", "/v1/me", { token: tokens.user })).status).toBe(401);
+    expect((await call("GET", "/v1/me", { token: tokens.user, fingerprint: `fp-${tag}` })).status).toBe(401);
   });
 
   it("accepts heartbeats, validates them and reports the gateway online", async () => {
-    expect((await call("POST", "/v1/device/heartbeat", { token: tokens.gateway, body: { ip: "999.1.1.1" } })).status)
-      .toBe(400);
-    expect((await call("POST", "/v1/device/heartbeat", { token: tokens.gateway, body: { otro: 1 } })).status).toBe(400);
+    expect((await call("POST", "/v1/device/heartbeat", { ...asGateway(), body: { ip: "999.1.1.1" } })).status).toBe(400);
+    expect((await call("POST", "/v1/device/heartbeat", { ...asGateway(), body: { otro: 1 } })).status).toBe(400);
 
     const beat = await call("POST", "/v1/device/heartbeat", {
-      token: tokens.gateway,
+      ...asGateway(),
       body: { version: "1.4.0", ip: "10.0.0.20", terminales: [{ mac: "AA:BB:CC:DD:EE:01", ip: "10.0.0.10" }] },
     });
     expect(beat.status).toBe(200);
@@ -154,7 +160,7 @@ describe("gateway: token operativo, heartbeat, estado e historial", () => {
     // Nobody vouches for its terminals while it is gone.
     expect((await db().device.findUniqueOrThrow({ where: { id: ids.terminal } })).enLinea).toBe(false);
 
-    await call("POST", "/v1/device/heartbeat", { token: tokens.gateway, body: {} });
+    await call("POST", "/v1/device/heartbeat", { ...asGateway(), body: {} });
     expect((await db().device.findUniqueOrThrow({ where: { id: ids.gateway } })).enLinea).toBe(true);
   });
 
@@ -172,11 +178,11 @@ describe("gateway: token operativo, heartbeat, estado e historial", () => {
 
   it("rejects a deactivated gateway and an expired enrollment", async () => {
     await db().device.update({ where: { id: ids.gateway }, data: { enrollmentExpiresAt: new Date(Date.now() - 1000) } });
-    const expired = await call("GET", "/v1/me", { token: tokens.gateway });
+    const expired = await call("GET", "/v1/me", { ...asGateway() });
     expect(expired.status).toBe(401);
     expect(expired.body.message).toBe("Enrollment expired");
 
     await db().device.update({ where: { id: ids.gateway }, data: { enrollmentExpiresAt: null, estado: false } });
-    expect((await call("GET", "/v1/me", { token: tokens.gateway })).status).toBe(401);
+    expect((await call("GET", "/v1/me", { ...asGateway() })).status).toBe(401);
   });
 });

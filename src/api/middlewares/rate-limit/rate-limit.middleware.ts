@@ -146,6 +146,8 @@ export interface FailedAuthLimitOptions {
   /** Rejected credentials allowed per client address within the window. */
   maxFailures: number;
   message?: string;
+  /** Answers that count as a rejected credential (401 and 403 by default). */
+  failureStatuses?: number[];
 }
 
 /**
@@ -154,15 +156,21 @@ export interface FailedAuthLimitOptions {
  * several routes so they draw from the same budget. Requests with a valid credential are
  * never counted, so normal polling is not blocked.
  */
-export const failedAuthLimiter = ({ windowMs, maxFailures, message = DEFAULT_MESSAGE }: FailedAuthLimitOptions) => {
+export const failedAuthLimiter = ({
+  windowMs,
+  maxFailures,
+  message = DEFAULT_MESSAGE,
+  failureStatuses,
+}: FailedAuthLimitOptions) => {
   const addresses = new WindowCounter(windowMs);
+  const failures = failureStatuses ? new Set(failureStatuses) : FAILED_LOGIN_STATUSES;
   return (req: Request, res: Response, next: NextFunction) => {
     const key = clientIp(req);
     if (addresses.count(key) >= maxFailures) {
       return tooManyRequests(res, addresses.retryAfterSeconds(key), message);
     }
     res.on("finish", () => {
-      if (FAILED_LOGIN_STATUSES.has(res.statusCode)) addresses.increment(key);
+      if (failures.has(res.statusCode)) addresses.increment(key);
     });
     return next();
   };

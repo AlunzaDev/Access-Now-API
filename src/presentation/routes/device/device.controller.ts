@@ -136,6 +136,16 @@ export class DeviceController {
     }
   };
 
+  revokeEnrollment = async (request: Request, response: Response) => {
+    try {
+      return response.json(
+        await this.service.revokeEnrollment(routeParam(request, "proyectoId"), routeParam(request, "id")),
+      );
+    } catch (error) {
+      return ErrorService.handleApiError(error, response);
+    }
+  };
+
   /** Gateway: SINCRONIZAR all its active terminals. Terminal: send its configuration again. */
   sync = async (request: Request, response: Response) => {
     try {
@@ -180,7 +190,8 @@ export class DeviceController {
     try {
       const [error, dto] = HeartbeatDto.create(bodyOf(request));
       if (error) return ErrorService.send(response, 400, error);
-      return response.json(await this.gateways.heartbeat(requestGateway(request), dto!));
+      const sourceIp = request.ip ?? request.socket.remoteAddress ?? "";
+      return response.json(await this.gateways.heartbeat(requestGateway(request), dto!, sourceIp));
     } catch (error) {
       return ErrorService.handleApiError(error, response);
     }

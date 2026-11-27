@@ -9,6 +9,8 @@ export const DEVICE_EVENT_TYPES = [
   "ENROLAMIENTO_VENCIDO",
   "ERROR",
   "TERMINAL_DETECTADA",
+  "ALERTA_SEGURIDAD",
+  "REVOCADO",
 ] as const;
 
 export type DeviceEventType = (typeof DEVICE_EVENT_TYPES)[number];

@@ -1,6 +1,7 @@
 export * from "./auth/session-policy";
 export * from "./device/device-policy";
 export * from "./device/device-presence-policy";
+export * from "./device/gateway-access-policy";
 export * from "./project/project-access-policy";
 export * from "./project/project-location-policy";
 export * from "./shared/email-format";
