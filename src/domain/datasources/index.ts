@@ -4,5 +4,6 @@ export * from "./device-command/device-command.datasource";
 export * from "./event/event.datasource";
 export * from "./ticket/ticket.datasource";
 export * from "./ticket/ticket-catalog.datasource";
+export * from "./ticket/ticket-delivery.datasource";
 export * from "./project/project.datasource";
 export * from "./user/user.datasource";

@@ -13,6 +13,8 @@ import { DeviceCommandService } from "../../application/services/device/device-c
 import { EventService } from "../../application/services/event/event.service";
 import { TicketService } from "../../application/services/ticket/ticket.service";
 import { TicketCatalogService } from "../../application/services/ticket/ticket-catalog.service";
+import { TicketDocumentService } from "../../application/services/ticket/ticket-document.service";
+import { PdfkitTicketDocumentRenderer } from "../../infrastructure/document/pdfkit-ticket-document.renderer";
 import { createGatewayAuthMiddleware } from "../../api/middlewares/gateway/gateway-auth.middleware";
 import { envs } from "../../config";
 import { NodemailerEmailSender } from "../../infrastructure/email/nodemailer-email.sender";
@@ -26,6 +28,7 @@ import { DeviceController } from "../routes/device/device.controller";
 import { EventController } from "../routes/event/event.controller";
 import { TicketController } from "../routes/ticket/ticket.controller";
 import { TicketCatalogController } from "../routes/ticket/ticket-catalog.controller";
+import { TicketDocumentController } from "../routes/ticket/ticket-document.controller";
 import {
   buildPermissionProfileRepository,
   buildDeviceCommandRepository,
@@ -34,6 +37,7 @@ import {
   buildUserRepository,
   buildEventRepository,
   buildTicketCatalogRepository,
+  buildTicketDeliveryRepository,
   buildTicketRepository,
 } from "./repositories/repositories.dependencies";
 
@@ -83,6 +87,16 @@ export const buildProjectController = () =>
 
 export const buildEventController = () =>
   new EventController(new EventService(buildEventRepository(), buildFileStorage(), buildTicketRepository()));
+
+export const buildTicketDocumentService = () =>
+  new TicketDocumentService(
+    buildTicketDeliveryRepository(),
+    new PdfkitTicketDocumentRenderer(),
+    new NodemailerEmailSender(),
+    envs.TICKET_QR_ENCRYPTION_KEY,
+  );
+
+export const buildTicketDocumentController = () => new TicketDocumentController(buildTicketDocumentService());
 
 export const buildTicketCatalogController = () =>
   new TicketCatalogController(new TicketCatalogService(buildTicketCatalogRepository()));

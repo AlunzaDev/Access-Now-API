@@ -19,7 +19,7 @@ export class NodemailerEmailSender implements EmailSender {
         })
       : null;
 
-  async send({ to, subject, htmlBody }: EmailMessage): Promise<boolean> {
+  async send({ to, subject, htmlBody, attachments = [] }: EmailMessage): Promise<boolean> {
     if (!this.transporter) {
       logger.warn("Correo no enviado: falta configurar MAILER_HOST, MAILER_EMAIL y MAILER_SECRET_KEY.");
       return false;
@@ -31,9 +31,10 @@ export class NodemailerEmailSender implements EmailSender {
         to,
         subject,
         html: htmlBody,
-        attachments: existsSync(LOGO_PATH)
-          ? [{ filename: "accessnow-icon.png", path: LOGO_PATH, cid: "accessnow-logo" }]
-          : [],
+        attachments: [
+          ...(existsSync(LOGO_PATH) ? [{ filename: "accessnow-icon.png", path: LOGO_PATH, cid: "accessnow-logo" }] : []),
+          ...attachments,
+        ],
       });
       return true;
     } catch (error) {

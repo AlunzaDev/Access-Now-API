@@ -1,9 +1,16 @@
 // Outgoing email. The implementation (SMTP with nodemailer) is in infrastructure/email.
 
+export interface EmailAttachment {
+  filename: string;
+  content: Buffer;
+  contentType: string;
+}
+
 export interface EmailMessage {
   to: string | string[];
   subject: string;
   htmlBody: string;
+  attachments?: EmailAttachment[];
 }
 
 export interface EmailSender {

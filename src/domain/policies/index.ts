@@ -7,6 +7,7 @@ export * from "./project/project-access-policy";
 export * from "./project/project-location-policy";
 export * from "./ticket/ticket-policy";
 export * from "./ticket/ticket-catalog-policy";
+export * from "./ticket/ticket-delivery-policy";
 export * from "./shared/email-format";
 export * from "./user/password-policy";
 export * from "./user/user-management-policy";

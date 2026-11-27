@@ -1,4 +1,5 @@
-import { createCipheriv, createDecipheriv, createHash, randomBytes } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
+import { decryptToken, encryptToken } from "./ticket-token-cipher";
 import type { TicketListFilters } from "../../../domain/datasources/ticket/ticket.datasource";
 import type {
   CreateTicketBatchDto,
@@ -10,32 +11,6 @@ import { TicketEntity } from "../../../domain/entities/ticket/ticket.entity";
 import { CustomError } from "../../../domain/errors/custom.error";
 import { canCancelTicket, canChangeTicket } from "../../../domain/policies/ticket/ticket-policy";
 import type { TicketRepository } from "../../../domain/repository/ticket/ticket.repository";
-
-const encryptionKey = (seed: string) => createHash("sha256").update(`access-now-ticket-qr:${seed}`).digest();
-
-const encryptToken = (token: string, seed: string) => {
-  const iv = randomBytes(12);
-  const cipher = createCipheriv("aes-256-gcm", encryptionKey(seed), iv);
-  const ciphertext = Buffer.concat([cipher.update(token, "utf8"), cipher.final()]);
-  return {
-    tokenCiphertext: ciphertext.toString("base64url"),
-    tokenIv: iv.toString("base64url"),
-    tokenTag: cipher.getAuthTag().toString("base64url"),
-  };
-};
-
-const decryptToken = (encrypted: { tokenCiphertext: string; tokenIv: string; tokenTag: string }, seed: string) => {
-  const decipher = createDecipheriv(
-    "aes-256-gcm",
-    encryptionKey(seed),
-    Buffer.from(encrypted.tokenIv, "base64url"),
-  );
-  decipher.setAuthTag(Buffer.from(encrypted.tokenTag, "base64url"));
-  return Buffer.concat([
-    decipher.update(Buffer.from(encrypted.tokenCiphertext, "base64url")),
-    decipher.final(),
-  ]).toString("utf8");
-};
 
 const newSecret = (seed: string) => {
   const token = `AN1.${randomBytes(32).toString("base64url")}`;

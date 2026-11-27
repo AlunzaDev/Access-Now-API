@@ -3,6 +3,7 @@ export * from "./device/device.repository";
 export * from "./event/event.repository";
 export * from "./ticket/ticket.repository";
 export * from "./ticket/ticket-catalog.repository";
+export * from "./ticket/ticket-delivery.repository";
 export * from "./device-command/device-command.repository";
 export * from "./project/project.repository";
 export * from "./user/user.repository";

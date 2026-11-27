@@ -17,6 +17,10 @@ import { EventPostgresDatasource } from "../../../infrastructure/datasources/eve
 import { EventRepositoryImpl } from "../../../infrastructure/repositories/event/event.repository.impl";
 import { TicketPostgresDatasource } from "../../../infrastructure/datasources/ticket/ticket.datasource.postgres";
 import { TicketRepositoryImpl } from "../../../infrastructure/repositories/ticket/ticket.repository.impl";
+import { TicketDeliveryPostgresDatasource } from
+  "../../../infrastructure/datasources/ticket/ticket-delivery.datasource.postgres";
+import { TicketDeliveryRepositoryImpl } from
+  "../../../infrastructure/repositories/ticket/ticket-delivery.repository.impl";
 import { TicketCatalogPostgresDatasource } from
   "../../../infrastructure/datasources/ticket/ticket-catalog.datasource.postgres";
 import { TicketCatalogRepositoryImpl } from
@@ -36,6 +40,9 @@ export const buildDeviceCommandRepository = () =>
 
 export const buildEventRepository = () => new EventRepositoryImpl(new EventPostgresDatasource());
 export const buildTicketRepository = () => new TicketRepositoryImpl(new TicketPostgresDatasource());
+
+export const buildTicketDeliveryRepository = () =>
+  new TicketDeliveryRepositoryImpl(new TicketDeliveryPostgresDatasource());
 
 export const buildTicketCatalogRepository = () =>
   new TicketCatalogRepositoryImpl(new TicketCatalogPostgresDatasource());

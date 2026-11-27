@@ -23,6 +23,10 @@ export type TicketEntityOptions = AuditFields & {
   titularTelefono: string;
   usadoEn: number | null;
   canceladoEn: number | null;
+  /** Delivery by email, apart from the sale: NO_ENVIADO, ENVIADO or ERROR (last attempt failed). */
+  estadoEnvio: "NO_ENVIADO" | "ENVIADO" | "ERROR";
+  enviadoEn: number | null;
+  enviadoA: string;
   historial?: TicketHistoryItem[];
 };
 
@@ -65,6 +69,9 @@ export class TicketEntity {
       titularTelefono: String(object.titularTelefono ?? ""),
       usadoEn: instant(object.usadoEn),
       canceladoEn: instant(object.canceladoEn),
+      estadoEnvio: object.estadoEnvio === "ENVIADO" || object.estadoEnvio === "ERROR" ? object.estadoEnvio : "NO_ENVIADO",
+      enviadoEn: instant(object.enviadoEn),
+      enviadoA: String(object.enviadoA ?? ""),
       ...(Array.isArray(object.history) ? { historial: object.history as TicketHistoryItem[] } : {}),
       ...auditFieldsFromObject(object),
     });
