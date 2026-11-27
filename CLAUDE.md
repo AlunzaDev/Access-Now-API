@@ -8,6 +8,7 @@ Antes de escribir código, sigue estas guías; son obligatorias y el lint revisa
 - [docs/convencion-nombres.md](docs/convencion-nombres.md): código en inglés, contrato (rutas, campos, mensajes) en español, kebab-case.
 - [docs/contrato-api.md](docs/contrato-api.md): formato de errores `{ ok, message, statusCode, details }`, listados `{ items, total }` con `desde`/`limite`, validaciones compartidas y tabla de endpoints.
 - [docs/pruebas.md](docs/pruebas.md): qué pruebas escribir y cuándo correrlas.
+- [docs/boletos.md](docs/boletos.md) y [docs/dispositivos.md](docs/dispositivos.md): reglas de negocio (estados de venta, acceso y envío; QR; validación; gateways, terminales y comandos). Si cambias una regla, actualízalas en el mismo commit.
 
 Reglas rápidas:
 
