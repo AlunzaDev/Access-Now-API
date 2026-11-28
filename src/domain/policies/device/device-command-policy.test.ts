@@ -13,7 +13,7 @@ const terminal: TerminalState = {
   nombre: "Torniquete 1",
   ip: "10.0.0.10",
   mac: "AA:BB:CC:DD:EE:01",
-  carril: "1",
+  puertaId: "door-1",
   sentido: "ENTRADA",
   gatewayId: "g1",
   estado: true,
@@ -54,7 +54,9 @@ describe("planTerminalCommands", () => {
 
   it("reconfigures on network or lane changes, not on a rename", () => {
     expect(kinds(planTerminalCommands(terminal, { ...terminal, ip: "10.0.0.11" }))).toEqual(["CONFIGURAR_TERMINAL@g1"]);
-    expect(kinds(planTerminalCommands(terminal, { ...terminal, carril: "2" }))).toEqual(["CONFIGURAR_TERMINAL@g1"]);
+    expect(kinds(planTerminalCommands(terminal, { ...terminal, puertaId: "door-2" }))).toEqual([
+      "CONFIGURAR_TERMINAL@g1",
+    ]);
     expect(kinds(planTerminalCommands(terminal, { ...terminal, sentido: "SALIDA" }))).toEqual(["CONFIGURAR_TERMINAL@g1"]);
     expect(planTerminalCommands(terminal, { ...terminal, nombre: "Otro nombre" })).toEqual([]);
   });
@@ -65,7 +67,7 @@ describe("planTerminalCommands", () => {
       nombre: "Torniquete 1",
       ip: "10.0.0.10",
       mac: "AA:BB:CC:DD:EE:01",
-      carril: "1",
+      puertaId: "door-1",
       sentido: "ENTRADA",
     });
   });

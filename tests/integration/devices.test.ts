@@ -38,7 +38,15 @@ const expectApiError = (result: { status: number; body: Json }, statusCode: numb
 };
 
 describe("dispositivos por proyecto", () => {
-  const ids = { project: "", otherProject: "", profile: "", gateway: "", terminal: "", otherDevice: "" };
+  const ids = {
+    project: "",
+    otherProject: "",
+    profile: "",
+    gateway: "",
+    terminal: "",
+    otherDevice: "",
+    door: "",
+  };
   const tokens = { super: "", admin: "" };
 
   beforeAll(async () => {
@@ -56,6 +64,9 @@ describe("dispositivos por proyecto", () => {
     ids.otherProject = (
       await db().project.create({ data: { nombre: `${tag}-other`, clave: `${tag}-OTHER`.toUpperCase() } })
     ).id;
+    ids.door = (await db().venueDoor.create({
+      data: { projectId: ids.project, nombre: "Puerta norte" },
+    })).id;
     ids.profile = (
       await db().permissionProfile.create({ data: { nombre: tag, modules: ["scanners"] } })
     ).id;
@@ -102,6 +113,58 @@ describe("dispositivos por proyecto", () => {
     );
   });
 
+  it("exposes the venue to scanners but only projects may configure doors", async () => {
+    const layout = await call("GET", `/proyectos/${ids.project}/recinto`, { token: tokens.admin });
+    expect(layout.status).toBe(200);
+    expect(layout.body.puertas).toEqual(expect.arrayContaining([
+      expect.objectContaining({ id: ids.door, nombre: "Puerta norte" }),
+    ]));
+
+    expectApiError(await call("POST", `/proyectos/${ids.project}/recinto/puertas`, {
+      token: tokens.admin,
+      body: { nombre: "Puerta restringida" },
+    }), 403);
+
+    const created = await call("POST", `/proyectos/${ids.project}/recinto/puertas`, {
+      token: tokens.super,
+      body: { nombre: "Puerta sur", descripcion: "Acceso sur", zonaIds: [] },
+    });
+    expect(created.status).toBe(201);
+    expect(created.body).toMatchObject({ nombre: "Puerta sur", zonaIds: [] });
+
+    const withZone = await call("POST", `/proyectos/${ids.project}/recinto/zonas`, {
+      token: tokens.super,
+      body: { nombre: "General", descripcion: "Zona general" },
+    });
+    expect(withZone.status).toBe(201);
+    const zone = withZone.body.zonas.find((item: Json) => item.nombre === "General");
+
+    const withSection = await call("POST", `/proyectos/${ids.project}/recinto/zonas/${zone.id}/secciones`, {
+      token: tokens.super,
+      body: { nombre: "Norte" },
+    });
+    const section = withSection.body.zonas[0].secciones.find((item: Json) => item.nombre === "Norte");
+    const withRow = await call("POST", `/proyectos/${ids.project}/recinto/secciones/${section.id}/filas`, {
+      token: tokens.super,
+      body: { nombre: "A" },
+    });
+    const row = withRow.body.zonas[0].secciones[0].filas.find((item: Json) => item.nombre === "A");
+    const withSeat = await call("POST", `/proyectos/${ids.project}/recinto/filas/${row.id}/asientos`, {
+      token: tokens.super,
+      body: { nombre: "1" },
+    });
+    expect(withSeat.status).toBe(201);
+    expect(withSeat.body.zonas[0].secciones[0].filas[0].asientos).toEqual(
+      expect.arrayContaining([expect.objectContaining({ nombre: "1" })]),
+    );
+
+    const assigned = await call("PATCH", `/proyectos/${ids.project}/recinto/puertas/${created.body.id}`, {
+      token: tokens.super,
+      body: { zonaIds: [zone.id] },
+    });
+    expect(assigned.body.zonaIds).toEqual([zone.id]);
+  });
+
   it("creates and normalizes a gateway", async () => {
     const result = await call("POST", `/proyectos/${ids.project}/dispositivos`, {
       token: tokens.admin,
@@ -145,7 +208,7 @@ describe("dispositivos por proyecto", () => {
     expectApiError(
       await call("POST", `/proyectos/${ids.project}/dispositivos`, {
         token: tokens.admin,
-        body: { tipo: "GATEWAY", nombre: "Mal", ip: "10.0.0.1", carril: "1" },
+        body: { tipo: "GATEWAY", nombre: "Mal", ip: "10.0.0.1", puertaId: ids.door },
       }),
       400,
     );
@@ -165,7 +228,7 @@ describe("dispositivos por proyecto", () => {
         ip: "192.168.1.20",
         mac: "11:22:33:44:55:66",
         gatewayId: ids.otherDevice,
-        carril: "Norte 1",
+        puertaId: ids.door,
         sentido: "ENTRADA",
       },
     });
@@ -179,7 +242,7 @@ describe("dispositivos por proyecto", () => {
         ip: "192.168.1.20",
         mac: "11:22:33:44:55:66",
         gatewayId: ids.gateway,
-        carril: "Norte 1",
+        puertaId: ids.door,
         sentido: "ENTRADA",
       },
     });
@@ -266,9 +329,9 @@ describe("dispositivos por proyecto", () => {
   it("updates a device and prevents deleting a gateway in use", async () => {
     const updated = await call("PATCH", `/proyectos/${ids.project}/dispositivos/${ids.terminal}`, {
       token: tokens.admin,
-      body: { carril: "Norte 2", estado: false },
+      body: { puertaId: ids.door, estado: false },
     });
-    expect(updated.body).toMatchObject({ carril: "Norte 2", estado: false });
+    expect(updated.body).toMatchObject({ puertaId: ids.door, estado: false });
 
     expectApiError(
       await call("DELETE", `/proyectos/${ids.project}/dispositivos/${ids.gateway}`, {

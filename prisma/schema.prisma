@@ -218,10 +218,12 @@ model Project {
   actualizadoPorId     String?  @map("actualizado_por_id") @db.Uuid
   actualizadoPorNombre String   @default("Sistema") @map("actualizado_por_nombre")
 
-  users   UserProject[]
-  devices Device[]
-  events  Event[]
-  tickets Ticket[]
+  users      UserProject[]
+  devices    Device[]
+  events     Event[]
+  tickets    Ticket[]
+  venueZones VenueZone[]
+  venueDoors VenueDoor[]
 
   @@map("proyectos")
 }
@@ -246,8 +248,9 @@ model Event {
   actualizadoPorId     String?  @map("actualizado_por_id") @db.Uuid
   actualizadoPorNombre String   @default("Sistema") @map("actualizado_por_nombre")
 
-  project Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  project Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
   tickets Ticket[]
+  zones   EventZone[]
 
   @@index([projectId, fechaInicio])
   @@map("eventos")
@@ -267,6 +270,18 @@ model Ticket {
   estadoEnvio          TicketDeliveryStatus @default(NO_ENVIADO) @map("estado_envio")
   enviadoEn            DateTime?            @map("enviado_en") @db.Timestamptz(3)
   enviadoA             String               @default("") @map("enviado_a")
+  zoneId               String?              @map("zona_id") @db.Uuid
+  sectionId            String?              @map("seccion_id") @db.Uuid
+  rowId                String?              @map("fila_id") @db.Uuid
+  seatId               String?              @map("asiento_id") @db.Uuid
+  doorId               String?              @map("puerta_id") @db.Uuid
+  zonaNombre           String               @default("") @map("zona_nombre")
+  seccionNombre        String               @default("") @map("seccion_nombre")
+  filaNombre           String               @default("") @map("fila_nombre")
+  asientoNombre        String               @default("") @map("asiento_nombre")
+  puertaNombre         String               @default("") @map("puerta_nombre")
+  emitidoEn            DateTime             @default(now()) @map("emitido_en") @db.Timestamptz(3)
+  vendidoEn            DateTime?            @map("vendido_en") @db.Timestamptz(3)
   createdAt            DateTime             @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt            DateTime             @updatedAt @map("updated_at") @db.Timestamptz(3)
   creadoPorId          String?              @map("creado_por_id") @db.Uuid
@@ -280,6 +295,11 @@ model Ticket {
   credentials TicketCredential[]
   history     TicketEvent[]
   deliveries  TicketDelivery[]
+  zone        VenueZone?         @relation(fields: [zoneId], references: [id], onDelete: Restrict)
+  section     VenueSection?      @relation(fields: [sectionId], references: [id], onDelete: Restrict)
+  row         VenueRow?          @relation(fields: [rowId], references: [id], onDelete: Restrict)
+  seat        VenueSeat?         @relation(fields: [seatId], references: [id], onDelete: Restrict)
+  door        VenueDoor?         @relation(fields: [doorId], references: [id], onDelete: Restrict)
 
   @@index([projectId, eventId, estadoVenta])
   @@index([eventId, createdAt])
@@ -328,7 +348,7 @@ model Device {
   modelo                   String             @default("")
   estado                   Boolean            @default(true)
   gatewayId                String?            @map("gateway_id") @db.Uuid
-  carril                   String?
+  doorId                   String?            @map("puerta_id") @db.Uuid
   sentido                  DeviceDirection?
   configEstado             DeviceConfigStatus @default(PENDIENTE) @map("config_estado")
   configError              String             @default("") @map("config_error")
@@ -356,6 +376,7 @@ model Device {
   project          Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
   gateway          Device?         @relation("GatewayTerminals", fields: [gatewayId], references: [id], onDelete: Restrict)
   terminals        Device[]        @relation("GatewayTerminals")
+  door             VenueDoor?      @relation(fields: [doorId], references: [id], onDelete: Restrict)
   events           DeviceEvent[]
   gatewayCommands  DeviceCommand[] @relation("GatewayCommands")
   terminalCommands DeviceCommand[] @relation("TerminalCommands")
@@ -363,7 +384,136 @@ model Device {
   @@unique([projectId, mac])
   @@index([projectId, tipo])
   @@index([gatewayId])
+  @@index([doorId])
   @@map("dispositivos")
+}
+
+model VenueZone {
+  id                   String   @id @default(uuid(7)) @db.Uuid
+  projectId            String   @map("proyecto_id") @db.Uuid
+  nombre               String
+  descripcion          String   @default("")
+  estado               Boolean  @default(true)
+  createdAt            DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt            DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  creadoPorId          String?  @map("creado_por_id") @db.Uuid
+  creadoPorNombre      String   @default("Sistema") @map("creado_por_nombre")
+  actualizadoPorId     String?  @map("actualizado_por_id") @db.Uuid
+  actualizadoPorNombre String   @default("Sistema") @map("actualizado_por_nombre")
+
+  project  Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  sections VenueSection[]
+  doors    VenueDoorZone[]
+  events   EventZone[]
+  tickets  Ticket[]
+
+  @@unique([projectId, nombre])
+  @@map("proyecto_zonas")
+}
+
+model VenueSection {
+  id                   String   @id @default(uuid(7)) @db.Uuid
+  zoneId               String   @map("zona_id") @db.Uuid
+  nombre               String
+  descripcion          String   @default("")
+  estado               Boolean  @default(true)
+  createdAt            DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt            DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  creadoPorId          String?  @map("creado_por_id") @db.Uuid
+  creadoPorNombre      String   @default("Sistema") @map("creado_por_nombre")
+  actualizadoPorId     String?  @map("actualizado_por_id") @db.Uuid
+  actualizadoPorNombre String   @default("Sistema") @map("actualizado_por_nombre")
+
+  zone    VenueZone  @relation(fields: [zoneId], references: [id], onDelete: Cascade)
+  rows    VenueRow[]
+  tickets Ticket[]
+
+  @@unique([zoneId, nombre])
+  @@map("proyecto_secciones")
+}
+
+model VenueRow {
+  id                   String   @id @default(uuid(7)) @db.Uuid
+  sectionId            String   @map("seccion_id") @db.Uuid
+  nombre               String
+  estado               Boolean  @default(true)
+  createdAt            DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt            DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  creadoPorId          String?  @map("creado_por_id") @db.Uuid
+  creadoPorNombre      String   @default("Sistema") @map("creado_por_nombre")
+  actualizadoPorId     String?  @map("actualizado_por_id") @db.Uuid
+  actualizadoPorNombre String   @default("Sistema") @map("actualizado_por_nombre")
+
+  section VenueSection @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  seats   VenueSeat[]
+  tickets Ticket[]
+
+  @@unique([sectionId, nombre])
+  @@map("proyecto_filas")
+}
+
+model VenueSeat {
+  id                   String   @id @default(uuid(7)) @db.Uuid
+  rowId                String   @map("fila_id") @db.Uuid
+  nombre               String
+  estado               Boolean  @default(true)
+  createdAt            DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt            DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  creadoPorId          String?  @map("creado_por_id") @db.Uuid
+  creadoPorNombre      String   @default("Sistema") @map("creado_por_nombre")
+  actualizadoPorId     String?  @map("actualizado_por_id") @db.Uuid
+  actualizadoPorNombre String   @default("Sistema") @map("actualizado_por_nombre")
+
+  row     VenueRow @relation(fields: [rowId], references: [id], onDelete: Cascade)
+  tickets Ticket[]
+
+  @@unique([rowId, nombre])
+  @@map("proyecto_asientos")
+}
+
+model VenueDoor {
+  id                   String   @id @default(uuid(7)) @db.Uuid
+  projectId            String   @map("proyecto_id") @db.Uuid
+  nombre               String
+  descripcion          String   @default("")
+  estado               Boolean  @default(true)
+  createdAt            DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt            DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  creadoPorId          String?  @map("creado_por_id") @db.Uuid
+  creadoPorNombre      String   @default("Sistema") @map("creado_por_nombre")
+  actualizadoPorId     String?  @map("actualizado_por_id") @db.Uuid
+  actualizadoPorNombre String   @default("Sistema") @map("actualizado_por_nombre")
+
+  project   Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  zones     VenueDoorZone[]
+  terminals Device[]
+  tickets   Ticket[]
+
+  @@unique([projectId, nombre])
+  @@map("proyecto_puertas")
+}
+
+model VenueDoorZone {
+  doorId String @map("puerta_id") @db.Uuid
+  zoneId String @map("zona_id") @db.Uuid
+
+  door VenueDoor @relation(fields: [doorId], references: [id], onDelete: Cascade)
+  zone VenueZone @relation(fields: [zoneId], references: [id], onDelete: Cascade)
+
+  @@id([doorId, zoneId])
+  @@map("proyecto_puerta_zonas")
+}
+
+model EventZone {
+  eventId   String @map("evento_id") @db.Uuid
+  zoneId    String @map("zona_id") @db.Uuid
+  capacidad Int?
+
+  event Event     @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  zone  VenueZone @relation(fields: [zoneId], references: [id], onDelete: Restrict)
+
+  @@id([eventId, zoneId])
+  @@map("evento_zonas")
 }
 
 model UserProject {

@@ -15,7 +15,7 @@ export const isValidIpv4 = (value: unknown): boolean => {
 export type DeviceKindFields = {
   mac?: string | null;
   gatewayId?: string | null;
-  carril?: string | null;
+  puertaId?: string | null;
   sentido?: string | null;
   urlRemota?: string | null;
   version?: string | null;
@@ -25,13 +25,14 @@ export const validateDeviceKind = (tipo: DeviceType, fields: DeviceKindFields): 
   if (tipo === "TERMINAL") {
     if (!fields.mac) return "'mac' es requerida para una terminal";
     if (!fields.gatewayId) return "'gatewayId' es requerido para una terminal";
+    if (!fields.puertaId) return "'puertaId' es requerido para una terminal";
     if (!fields.sentido || !["ENTRADA", "SALIDA", "BIDIRECCIONAL"].includes(fields.sentido)) {
       return "'sentido' debe ser ENTRADA, SALIDA o BIDIRECCIONAL";
     }
     if (fields.urlRemota || fields.version) return "Una terminal no acepta campos de gateway";
     return undefined;
   }
-  if (fields.gatewayId || fields.carril || fields.sentido) return "Un gateway no acepta campos de terminal";
+  if (fields.gatewayId || fields.puertaId || fields.sentido) return "Un gateway no acepta campos de terminal";
   return undefined;
 };
 

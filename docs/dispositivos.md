@@ -10,7 +10,7 @@ proyecto. Para los endpoints, ver [contrato-api.md](contrato-api.md); para la pa
 |---|---|---|
 | **Proyecto** | El recinto o cliente. Todo pertenece a uno. | Estadio Norte |
 | **Gateway** | Una Raspberry con SCAT en la red del recinto. Valida boletos y configura terminales. Puede haber varios por proyecto. | Raspberry de la puerta 1 |
-| **Terminal** | Un torniquete o puerta Hikvision. Siempre cuelga de un gateway y se identifica por su **MAC**. | Torniquete 3, carril 2, entrada |
+| **Terminal** | Un carril o torniquete físico. Siempre cuelga de un gateway, pertenece a una puerta y se identifica por su **MAC**. | Torniquete norte 3, entrada |
 
 **La Raspberry siempre inicia la conexión.** Access Now nunca la llama: no hay que abrir puertos ni tener
 IP pública en el recinto. Todo viaja en el **heartbeat** (cada 60 s) y su respuesta.
@@ -88,7 +88,7 @@ esperan en una cola y viajan en la respuesta del siguiente heartbeat (máximo un
 
 | Cambio en el dashboard | Comando |
 |---|---|
-| Alta de una terminal activa, cambio de IP, carril o sentido, reactivarla | `CONFIGURAR_TERMINAL` |
+| Alta de una terminal activa, cambio de IP, puerta o sentido, reactivarla | `CONFIGURAR_TERMINAL` |
 | Desactivar o borrar una terminal | `ELIMINAR_TERMINAL` |
 | Moverla a otro gateway o cambiarle la MAC | `ELIMINAR_TERMINAL` en el anterior + `CONFIGURAR_TERMINAL` |
 | Botón "Sincronizar terminales", o enrolar/re-enrolar el gateway | `SINCRONIZAR` (todas las terminales activas) |

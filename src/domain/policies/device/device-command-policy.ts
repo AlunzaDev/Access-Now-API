@@ -11,7 +11,7 @@ export type TerminalState = {
   nombre: string;
   ip: string;
   mac: string | null;
-  carril: string | null;
+  puertaId: string | null;
   sentido: DeviceDirection | null;
   gatewayId: string | null;
   estado: boolean;
@@ -30,7 +30,7 @@ export const terminalSpec = (terminal: TerminalState): TerminalSpec | null =>
         nombre: terminal.nombre,
         ip: terminal.ip,
         mac: terminal.mac,
-        carril: terminal.carril,
+        puertaId: terminal.puertaId,
         sentido: terminal.sentido ?? "ENTRADA",
       }
     : null;
@@ -62,7 +62,7 @@ export const planTerminalCommands = (
     return [...command("ELIMINAR_TERMINAL", previous), ...command("CONFIGURAR_TERMINAL", current)];
   }
   const changed = previous.ip !== current.ip
-    || previous.carril !== current.carril
+    || previous.puertaId !== current.puertaId
     || previous.sentido !== current.sentido;
   return changed ? command("CONFIGURAR_TERMINAL", current) : [];
 };

@@ -8,6 +8,7 @@ import { ProjectRoutes } from "./project/project.routes";
 import { PermissionProfileRoutes } from "./permission-profile/permission-profile.routes";
 import { UserRoutes } from "./user/user.routes";
 import { DeviceRoutes } from "./device/device.routes";
+import { VenueRoutes } from "./venue/venue.routes";
 import { EventRoutes } from "./event/event.routes";
 import { TicketRoutes } from "./ticket/ticket.routes";
 
@@ -28,6 +29,7 @@ export class AppRoutes {
     router.use("/api/usuarios", UserRoutes.routes(auth));
     router.use("/api/perfiles-permisos", PermissionProfileRoutes.routes(auth));
     router.use("/api/proyectos/:proyectoId/dispositivos", DeviceRoutes.routes(auth));
+    router.use("/api/proyectos/:proyectoId/recinto", VenueRoutes.routes(auth));
     router.use("/api/proyectos/:proyectoId/eventos", EventRoutes.routes(auth));
     router.use("/api/proyectos/:proyectoId/boletos", TicketRoutes.routes(auth));
     router.use("/api/proyectos", ProjectRoutes.routes(auth));

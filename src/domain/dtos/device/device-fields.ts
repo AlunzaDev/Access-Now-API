@@ -15,7 +15,7 @@ export const DEVICE_FIELDS = new Set([
   "modelo",
   "estado",
   "gatewayId",
-  "carril",
+  "puertaId",
   "sentido",
   "urlRemota",
   "version",
@@ -29,7 +29,7 @@ export type DeviceValues = {
   modelo?: string;
   estado?: boolean;
   gatewayId?: string | null;
-  carril?: string | null;
+  puertaId?: string | null;
   sentido?: DeviceDirection | null;
   urlRemota?: string;
   version?: string;
@@ -76,9 +76,9 @@ export const readDevice = (
     if (body.gatewayId !== null && typeof body.gatewayId !== "string") return ["'gatewayId' debe ser texto"];
     values.gatewayId = typeof body.gatewayId === "string" ? body.gatewayId.trim() : null;
   }
-  if (body.carril !== undefined) {
-    if (body.carril !== null && typeof body.carril !== "string") return ["'carril' debe ser texto"];
-    values.carril = typeof body.carril === "string" ? body.carril.trim() : null;
+  if (body.puertaId !== undefined) {
+    if (body.puertaId !== null && typeof body.puertaId !== "string") return ["'puertaId' debe ser texto"];
+    values.puertaId = typeof body.puertaId === "string" ? body.puertaId.trim() : null;
   }
   if (body.sentido !== undefined) {
     if (body.sentido !== null && !DEVICE_DIRECTIONS.includes(body.sentido as DeviceDirection)) {

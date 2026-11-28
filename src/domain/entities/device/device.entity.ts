@@ -19,7 +19,7 @@ export type DeviceEntityOptions = AuditFields & {
   modelo: string;
   estado: boolean;
   gatewayId: string | null;
-  carril: string | null;
+  puertaId: string | null;
   sentido: DeviceDirection | null;
   configEstado: DeviceConfigStatus;
   configError: string;
@@ -44,7 +44,7 @@ export class DeviceEntity {
   get modelo() { return this.values.modelo; }
   get estado() { return this.values.estado; }
   get gatewayId() { return this.values.gatewayId; }
-  get carril() { return this.values.carril; }
+  get puertaId() { return this.values.puertaId; }
   get sentido() { return this.values.sentido; }
   get configEstado() { return this.values.configEstado; }
   get configError() { return this.values.configError; }
@@ -72,7 +72,7 @@ export class DeviceEntity {
       modelo: String(object.modelo ?? ""),
       estado: object.estado !== false,
       gatewayId: typeof object.gatewayId === "string" ? object.gatewayId : null,
-      carril: typeof object.carril === "string" ? object.carril : null,
+      puertaId: typeof object.puertaId === "string" ? object.puertaId : null,
       sentido: DEVICE_DIRECTIONS.includes(object.sentido as DeviceDirection)
         ? (object.sentido as DeviceDirection)
         : null,

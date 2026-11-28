@@ -35,7 +35,7 @@ const stateOf = (device: DeviceEntity | null): TerminalState | null =>
         nombre: device.nombre,
         ip: device.ip,
         mac: device.mac,
-        carril: device.carril,
+        puertaId: device.puertaId,
         sentido: device.sentido,
         gatewayId: device.gatewayId,
         estado: device.estado,

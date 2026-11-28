@@ -13,7 +13,7 @@ export type TerminalSpec = {
   nombre: string;
   ip: string;
   mac: string;
-  carril: string | null;
+  puertaId: string | null;
   sentido: DeviceDirection;
 };
 

@@ -27,7 +27,7 @@ describe("device policy", () => {
       validateDeviceKind("TERMINAL", {
         mac: "AA:BB:CC:DD:EE:FF",
         gatewayId: "g",
-        carril: "1",
+        puertaId: "door-1",
         sentido: "ENTRADA",
       }),
     ).toBeUndefined();

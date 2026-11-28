@@ -27,7 +27,7 @@ const toEntity = (row: Device): DeviceEntity =>
     modelo: row.modelo,
     estado: row.estado,
     gatewayId: row.gatewayId,
-    carril: row.carril,
+    puertaId: row.doorId,
     sentido: row.sentido,
     configEstado: row.configEstado,
     configError: row.configError,
@@ -78,7 +78,7 @@ export class DevicePostgresDatasource implements DeviceDatasource {
           modelo: device.modelo ?? "",
           estado: device.estado ?? true,
           gatewayId: device.gatewayId,
-          carril: device.carril,
+          doorId: device.puertaId,
           sentido: device.sentido,
           urlRemota: device.urlRemota ?? "",
           version: device.version ?? "",
@@ -139,11 +139,13 @@ export class DevicePostgresDatasource implements DeviceDatasource {
     const existing = await this.findById(projectId, id);
     if (!existing) return null;
     const audit = currentAuditWrite();
+    const { puertaId, ...fields } = changes;
     const row = await withPrismaErrors(() =>
       this.devices.update({
         where: { id },
         data: {
-          ...changes,
+          ...fields,
+          ...(puertaId === undefined ? {} : { doorId: puertaId }),
           actualizadoPorId: audit.actorId,
           actualizadoPorNombre: audit.actorNombre,
         },

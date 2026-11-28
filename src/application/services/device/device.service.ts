@@ -14,6 +14,7 @@ import type { DeviceStatus } from "../../../domain/entities/device/device-status
 import { enrollmentStatus, isOnline } from "../../../domain/policies/device/device-presence-policy";
 import type { DeviceCommand } from "../../../domain/entities/device/device-command.entity";
 import type { DeviceCommandService } from "./device-command.service";
+import type { VenueRepository } from "../../../domain/repository/venue/venue.repository";
 
 const HOUR_MS = 60 * 60 * 1000;
 const TOKEN_VALIDITY_HOURS = [1, 24, 168] as const;
@@ -22,6 +23,7 @@ const ENROLLMENT_DURATION_DAYS = [30, 90] as const;
 export class DeviceService {
   constructor(
     private readonly devices: DeviceRepository,
+    private readonly venues: VenueRepository,
     private readonly commands: DeviceCommandService,
     /** A gateway without a heartbeat for this long counts as offline. */
     private readonly offlineAfterMs: number,
@@ -30,6 +32,7 @@ export class DeviceService {
   async create(projectId: string, dto: CreateDeviceDto): Promise<DeviceEntity> {
     await this.validateMac(projectId, dto.values.mac);
     await this.validateGateway(projectId, dto.values.tipo, dto.values.gatewayId);
+    await this.validateDoor(projectId, dto.values.tipo, dto.values.puertaId);
     const created = await this.devices.create({ projectId, ...dto.values });
     if (created.tipo !== "TERMINAL") return created;
     await this.commands.applyTerminalChange(null, created);
@@ -58,6 +61,7 @@ export class DeviceService {
     if (kindError) throw CustomError.badRequest(kindError);
     await this.validateMac(projectId, values.mac, id);
     await this.validateGateway(projectId, current.tipo, values.gatewayId);
+    await this.validateDoor(projectId, current.tipo, values.puertaId);
     const updated = await this.devices.update(projectId, id, dto.values);
     if (!updated) throw CustomError.notFound("Dispositivo no encontrado");
     if (updated.tipo !== "TERMINAL") return updated;
@@ -223,5 +227,11 @@ export class DeviceService {
     const gateway = gatewayId ? await this.devices.findById(projectId, gatewayId) : null;
     const error = validateTerminalGateway(projectId, gateway);
     if (error) throw CustomError.badRequest(error);
+  }
+
+  private async validateDoor(projectId: string, tipo: DeviceType, puertaId: string | null | undefined) {
+    if (tipo !== "TERMINAL") return;
+    const door = puertaId ? await this.venues.findDoor(projectId, puertaId) : null;
+    if (!door) throw CustomError.badRequest("La puerta debe pertenecer al proyecto");
   }
 }

@@ -14,6 +14,7 @@ import { EventService } from "../../application/services/event/event.service";
 import { TicketService } from "../../application/services/ticket/ticket.service";
 import { TicketCatalogService } from "../../application/services/ticket/ticket-catalog.service";
 import { TicketDocumentService } from "../../application/services/ticket/ticket-document.service";
+import { VenueService } from "../../application/services/venue/venue.service";
 import { PdfkitTicketDocumentRenderer } from "../../infrastructure/document/pdfkit-ticket-document.renderer";
 import { createGatewayAuthMiddleware } from "../../api/middlewares/gateway/gateway-auth.middleware";
 import { envs } from "../../config";
@@ -29,6 +30,7 @@ import { EventController } from "../routes/event/event.controller";
 import { TicketController } from "../routes/ticket/ticket.controller";
 import { TicketCatalogController } from "../routes/ticket/ticket-catalog.controller";
 import { TicketDocumentController } from "../routes/ticket/ticket-document.controller";
+import { VenueController } from "../routes/venue/venue.controller";
 import {
   buildPermissionProfileRepository,
   buildDeviceCommandRepository,
@@ -39,6 +41,7 @@ import {
   buildTicketCatalogRepository,
   buildTicketDeliveryRepository,
   buildTicketRepository,
+  buildVenueRepository,
 } from "./repositories/repositories.dependencies";
 
 const buildSessionService = () =>
@@ -126,9 +129,16 @@ export const buildGatewayAuthMiddleware = () => createGatewayAuthMiddleware(buil
 
 export const buildDeviceController = () =>
   new DeviceController(
-    new DeviceService(buildDeviceRepository(), buildDeviceCommandService(), envs.DEVICE_OFFLINE_AFTER_MS),
+    new DeviceService(
+      buildDeviceRepository(),
+      buildVenueRepository(),
+      buildDeviceCommandService(),
+      envs.DEVICE_OFFLINE_AFTER_MS,
+    ),
     buildGatewayService(),
   );
+
+export const buildVenueController = () => new VenueController(new VenueService(buildVenueRepository()));
 
 /** Marks offline the gateways that stop sending heartbeats (started by the server). */
 export const buildDevicePresenceMonitor = () =>

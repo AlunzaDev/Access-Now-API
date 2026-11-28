@@ -120,6 +120,9 @@ Los nombres de archivos y carpetas siguen [convencion-nombres.md](convencion-nom
 - **Cola de comandos:** `DeviceCommandService` encola en `dispositivo_comandos` lo que un cambio de terminal significa para su gateway (la decisión es pura, en `domain/policies/device/device-command-policy.ts`) y `GatewayService` la entrega en la respuesta del heartbeat y cierra cada comando con el resultado reportado. La entrega es optimista (`intentos` funciona como versión), así que dos heartbeats simultáneos no entregan el mismo comando. Detalle en `docs/contrato-api.md`, "Cola de comandos".
 - **Acceso endurecido:** `gateway-auth.middleware.ts` exige token operativo y `X-Device-Fingerprint`; las reglas puras (huella en tiempo constante, uso desde dos IP, enfriamiento de alertas) están en `domain/policies/device/gateway-access-policy.ts` y `GatewayService` deja las alertas en el historial. `/api/v1` limita los intentos fallidos por IP. Detalle en `docs/contrato-api.md`, "Seguridad de los gateways".
 - **Terminales por MAC:** la lista que reporta el gateway es la verdad física: actualiza IP, presencia y gateway de las MAC conocidas y registra las nuevas. El heartbeat es ligero (cada 60 s, `intervaloSegundos` en la respuesta; terminales solo cuando cambian).
+- **Recinto:** zonas, secciones, filas, asientos y puertas son catálogos del proyecto. Las puertas se
+  relacionan con las zonas que atienden. Una terminal representa directamente el carril y referencia una
+  puerta; un gateway representa el controlador y no pertenece a una puerta.
 
 Excepciones conocidas: `server.ts` conecta la base al arrancar y `routes/health` consulta el estado de la conexión; ambos usan `PostgresDatabase` directamente porque ese es su propósito.
 

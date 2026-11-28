@@ -88,7 +88,7 @@ El frontend valida lo mismo antes de enviar; el backend es la fuente de verdad.
 | QR de boleto | Token opaco `AN1.<base64url>` de 32 bytes aleatorios. SHA-256 se usa para validarlo y AES-256-GCM para recuperarlo con autorización; nunca aparece en listados |
 | MAC de dispositivo | Se normaliza como `AA:BB:CC:DD:EE:FF`; única dentro del proyecto; opcional solo para gateways |
 | IPv4 de dispositivo | Cuatro octetos decimales entre 0 y 255 |
-| Terminal | Requiere `gatewayId`, `mac` y `sentido`: `ENTRADA`, `SALIDA` o `BIDIRECCIONAL`; `carril` es opcional |
+| Terminal | Es el carril físico. Requiere `gatewayId`, `puertaId`, `mac` y `sentido`: `ENTRADA`, `SALIDA` o `BIDIRECCIONAL` |
 | Gateway | No acepta campos de terminal; no se elimina mientras tenga terminales (`409`) |
 | `proyectoIds` de un usuario | UUIDs de proyectos existentes. Se ignora para `SUPER_ROLE`. Un admin solo asigna sus propios proyectos (403 si no) y debe dejar al menos uno; los proyectos que no ve se conservan |
 
@@ -133,7 +133,7 @@ El frontend valida lo mismo antes de enviar; el backend es la fuente de verdad.
 | `DELETE /proyectos/:proyectoId` | `SUPER_ROLE` | Proyecto eliminado (y sus asignaciones a usuarios) |
 | `GET /proyectos/:proyectoId/dispositivos` | Módulo `scanners` y acceso al proyecto | `{ items, total }`; filtros `tipo`, `gatewayId`, `buscar`, `desde`, `limite` |
 | `POST /proyectos/:proyectoId/dispositivos` | Módulo `scanners` y acceso al proyecto | Dispositivo creado (`201`). Una terminal activa encola `CONFIGURAR_TERMINAL` y queda `configEstado: PENDIENTE` |
-| `GET/PATCH/DELETE /proyectos/:proyectoId/dispositivos/:id` | Módulo `scanners` y acceso al proyecto | Dispositivo; otro proyecto responde `404`. En terminales: cambio de IP, carril o sentido, o reactivación → `CONFIGURAR_TERMINAL`; desactivar o borrar → `ELIMINAR_TERMINAL`; cambio de gateway o de MAC → ambos. Renombrar no encola nada |
+| `GET/PATCH/DELETE /proyectos/:proyectoId/dispositivos/:id` | Módulo `scanners` y acceso al proyecto | Dispositivo; otro proyecto responde `404`. En terminales: cambio de IP, puerta o sentido, o reactivación → `CONFIGURAR_TERMINAL`; desactivar o borrar → `ELIMINAR_TERMINAL`; cambio de gateway o de MAC → ambos. Renombrar no encola nada |
 | `POST /proyectos/:proyectoId/dispositivos/:id/token-enrolamiento` | Módulo `scanners` y acceso al proyecto | Solo gateway; recibe vigencia de 1/24/168 horas y enrolamiento de 30/90 días o sin vencimiento; token visible una vez |
 | `GET/POST /proyectos/:proyectoId/eventos` | Módulo `events` y acceso al proyecto | Lista paginada o crea un evento con fechas `YYYY-MM-DD` y horas `HH:mm` |
 | `GET/PATCH/DELETE /proyectos/:proyectoId/eventos/:id` | Módulo `events` y acceso al proyecto | Consulta, actualiza o elimina un evento del proyecto; otro proyecto responde `404`. Un evento con boletos no se elimina (`409`): se desactiva, y desactivado no deja entrar ni genera boletos |
@@ -168,7 +168,29 @@ respuesta del heartbeat. El gateway las ejecuta en orden y reporta el resultado 
 - Enrolar o re-enrolar un gateway encola `SINCRONIZAR` con sus terminales activas.
 - Lo que reporta el gateway se atribuye a `Gateway <nombre>` en la auditoría.
 
-`payload` de `CONFIGURAR_TERMINAL` y `ELIMINAR_TERMINAL`: `{ terminal: { terminalId, nombre, ip, mac, carril, sentido } }`;
+`payload` de `CONFIGURAR_TERMINAL` y `ELIMINAR_TERMINAL`: `{ terminal: { terminalId, nombre, ip, mac, puertaId, sentido } }`;
+
+### Recinto del proyecto
+
+Las rutas requieren el módulo `projects` y acceso al proyecto. Una terminal es el carril físico; no existe
+un catálogo separado de carriles. Los gateways no pertenecen a una puerta.
+
+| Ruta | Resultado |
+|---|---|
+| `GET /proyectos/:proyectoId/recinto` | `{ zonas, puertas }`; las zonas incluyen secciones, filas y asientos |
+| `POST /proyectos/:proyectoId/recinto/puertas` | Crea una puerta con `nombre`, `descripcion`, `estado` y `zonaIds` |
+| `PATCH /proyectos/:proyectoId/recinto/puertas/:id` | Actualiza la puerta |
+| `DELETE /proyectos/:proyectoId/recinto/puertas/:id` | Elimina una puerta sin terminales ni boletos asociados |
+| `POST/PATCH/DELETE /proyectos/:proyectoId/recinto/zonas[/:id]` | Administra zonas del proyecto |
+| `POST /proyectos/:proyectoId/recinto/zonas/:zonaId/secciones` | Crea una sección dentro de la zona |
+| `PATCH/DELETE /proyectos/:proyectoId/recinto/secciones/:id` | Modifica o elimina una sección |
+| `POST /proyectos/:proyectoId/recinto/secciones/:seccionId/filas` | Crea una fila dentro de la sección |
+| `PATCH/DELETE /proyectos/:proyectoId/recinto/filas/:id` | Modifica o elimina una fila |
+| `POST /proyectos/:proyectoId/recinto/filas/:filaId/asientos` | Crea un asiento dentro de la fila |
+| `PATCH/DELETE /proyectos/:proyectoId/recinto/asientos/:id` | Modifica o elimina un asiento |
+
+Las eliminaciones son en cascada hacia niveles inferiores, pero se rechazan con `409` cuando existen
+boletos, terminales u otras referencias que deben conservarse.
 de `SINCRONIZAR`: `{ terminales: [ ...mismo formato ] }`.
 
 ## Seguridad de los gateways (`/api/v1`)

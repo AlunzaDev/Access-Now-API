@@ -25,6 +25,8 @@ import { TicketCatalogPostgresDatasource } from
   "../../../infrastructure/datasources/ticket/ticket-catalog.datasource.postgres";
 import { TicketCatalogRepositoryImpl } from
   "../../../infrastructure/repositories/ticket/ticket-catalog.repository.impl";
+import { VenuePostgresDatasource } from "../../../infrastructure/datasources/venue/venue.datasource.postgres";
+import { VenueRepositoryImpl } from "../../../infrastructure/repositories/venue/venue.repository.impl";
 
 export const buildUserRepository = () => new UserRepositoryImpl(new UserPostgresDatasource());
 
@@ -46,3 +48,5 @@ export const buildTicketDeliveryRepository = () =>
 
 export const buildTicketCatalogRepository = () =>
   new TicketCatalogRepositoryImpl(new TicketCatalogPostgresDatasource());
+
+export const buildVenueRepository = () => new VenueRepositoryImpl(new VenuePostgresDatasource());

@@ -34,7 +34,7 @@ const call = async (
 };
 
 describe("cola de comandos por heartbeat y terminales por MAC", () => {
-  const ids = { project: "", gateway: "", terminal: "" };
+  const ids = { project: "", gateway: "", terminal: "", door: "" };
   const tokens = { user: "", gateway: "" };
   const devices = () => `/proyectos/${ids.project}/dispositivos`;
   const beat = (body: Json = {}) =>
@@ -53,6 +53,7 @@ describe("cola de comandos por heartbeat y terminales por MAC", () => {
       },
     });
     ids.project = (await db().project.create({ data: { nombre: tag, clave: tag.toUpperCase() } })).id;
+    ids.door = (await db().venueDoor.create({ data: { projectId: ids.project, nombre: "Puerta 1" } })).id;
     ids.gateway = (
       await db().device.create({ data: { projectId: ids.project, tipo: "GATEWAY", nombre: "GW", ip: "10.1.0.2" } })
     ).id;
@@ -110,7 +111,7 @@ describe("cola de comandos por heartbeat y terminales por MAC", () => {
         ip: "10.1.0.10",
         mac: "AA:00:00:00:00:10",
         gatewayId: ids.gateway,
-        carril: "1",
+        puertaId: ids.door,
         sentido: "ENTRADA",
       },
     });
@@ -129,7 +130,14 @@ describe("cola de comandos por heartbeat y terminales por MAC", () => {
     expect(answer.body.comandos[0]).toMatchObject({
       tipo: "CONFIGURAR_TERMINAL",
       intentos: 1,
-      payload: { terminal: { terminalId: ids.terminal, ip: "10.1.0.11", mac: "AA:00:00:00:00:10", carril: "1" } },
+      payload: {
+        terminal: {
+          terminalId: ids.terminal,
+          ip: "10.1.0.11",
+          mac: "AA:00:00:00:00:10",
+          puertaId: ids.door,
+        },
+      },
     });
     // Delivered and waiting for its result: not sent again on the next heartbeat.
     expect((await beat()).body.comandos).toEqual([]);
